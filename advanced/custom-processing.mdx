@@ -1,0 +1,292 @@
+---
+title: "Custom Processing"
+description: "Hook into the dialogue compilation process to modify lines before and after compilation"
+---
+
+The Dialogue Manager allows you to hook into the compilation process to modify dialogue lines before they are compiled and after they are compiled. This is useful for implementing custom behavior, content filtering, dynamic replacements, or specialized formatting.
+
+## Creating a Dialogue Processor
+
+To create a custom processor:
+
+1. Create a new script in your project that extends `DMDialogueProcessor`
+2. In **Project Settings > Dialogue Manager > Editor**, point "Dialogue Processor Path" at your script file
+3. Enable "Advanced" settings to see this option
+
+<Note>
+The dialogue processor runs during compilation, not at runtime. Changes you make here are baked into the compiled dialogue resource.
+</Note>
+
+## Basic Example
+
+```gdscript
+extends DMDialogueProcessor
+
+func _preprocess_line(raw_string: String) -> String:
+	# Replace all apples with oranges before compilation
+	return raw_string.replace("apples", "oranges")
+
+
+func _process_line(line: DMCompiledLine) -> void:
+	# Make all dialogue to be spoken by Coco after compilation
+	line.character = "Coco"
+```
+
+## Preprocessing Lines
+
+The `_preprocess_line()` method is called for each raw line string **before** any compilation has happened.
+
+### Method Signature
+
+```gdscript
+func _preprocess_line(raw_string: String) -> String:
+	# Your processing logic here
+	return modified_string
+```
+
+### Parameters
+
+- `raw_string`: The original line as a `String`, exactly as written in your dialogue file
+
+### Returns
+
+The modified string that will be passed to the compiler.
+
+### Use Cases
+
+<Tabs>
+  <Tab title="Content Filtering">
+    ```gdscript
+    func _preprocess_line(raw_string: String) -> String:
+    	# Filter profanity
+    	var filtered = raw_string
+    	filtered = filtered.replace("badword1", "***")
+    	filtered = filtered.replace("badword2", "***")
+    	return filtered
+    ```
+  </Tab>
+  <Tab title="Template Variables">
+    ```gdscript
+    func _preprocess_line(raw_string: String) -> String:
+    	# Replace custom template syntax
+    	var processed = raw_string
+    	processed = processed.replace("@GAME_NAME@", "My Awesome Game")
+    	processed = processed.replace("@VERSION@", "1.0.0")
+    	return processed
+    ```
+  </Tab>
+  <Tab title="Shorthand Expansion">
+    ```gdscript
+    func _preprocess_line(raw_string: String) -> String:
+    	# Expand custom shorthand
+    	var processed = raw_string
+    	processed = processed.replace("/happy", "[img]res://icons/happy.png[/img]")
+    	processed = processed.replace("/sad", "[img]res://icons/sad.png[/img]")
+    	return processed
+    ```
+  </Tab>
+</Tabs>
+
+## Postprocessing Lines
+
+The `_process_line()` method is called for each compiled line **after** it has been compiled.
+
+### Method Signature
+
+```gdscript
+func _process_line(line: DMCompiledLine) -> void:
+	# Your processing logic here
+	# Modify the line object directly
+```
+
+### Parameters
+
+- `line`: The compiled line as a `DMCompiledLine` object
+
+### Returns
+
+Nothing. Modify the `line` object directly.
+
+### DMCompiledLine Properties
+
+The compiled line object has several properties you can modify:
+
+- `character` - The character name (String)
+- `text` - The dialogue text (String)
+- `tags` - Array of tags (Array)
+- `type` - The line type (String)
+
+### Use Cases
+
+<Tabs>
+  <Tab title="Character Overrides">
+    ```gdscript
+    func _process_line(line: DMCompiledLine) -> void:
+    	# Make specific character aliases point to the same character
+    	if line.character in ["Dave", "David", "Dr. Davidson"]:
+    		line.character = "Dave"
+    ```
+  </Tab>
+  <Tab title="Dynamic Formatting">
+    ```gdscript
+    func _process_line(line: DMCompiledLine) -> void:
+    	# Add color based on character
+    	match line.character:
+    		"Hero":
+    			line.text = "[color=blue]" + line.text + "[/color]"
+    		"Villain":
+    			line.text = "[color=red]" + line.text + "[/color]"
+    		"NPC":
+    			line.text = "[color=gray]" + line.text + "[/color]"
+    ```
+  </Tab>
+  <Tab title="Tag-Based Processing">
+    ```gdscript
+    func _process_line(line: DMCompiledLine) -> void:
+    	# Add visual effects based on tags
+    	if "whisper" in line.tags:
+    		line.text = "[i]" + line.text + "[/i]"
+    	if "shout" in line.tags:
+    		line.text = "[b]" + line.text.to_upper() + "[/b]"
+    ```
+  </Tab>
+</Tabs>
+
+## Advanced Example
+
+Here's a more complex example that demonstrates both preprocessing and postprocessing:
+
+```gdscript
+extends DMDialogueProcessor
+
+# Configuration
+const PROFANITY_LIST := ["badword1", "badword2", "badword3"]
+const CHARACTER_COLORS := {
+	"Hero": "aqua",
+	"Villain": "red",
+	"Sidekick": "yellow"
+}
+
+func _preprocess_line(raw_string: String) -> String:
+	var processed := raw_string
+	
+	# 1. Expand custom emoji shorthand
+	processed = processed.replace(":smile:", "😊")
+	processed = processed.replace(":heart:", "❤️")
+	processed = processed.replace(":star:", "⭐")
+	
+	# 2. Filter profanity
+	for word in PROFANITY_LIST:
+		processed = processed.replace(word, "*" * word.length())
+	
+	# 3. Replace placeholders
+	processed = processed.replace("{{PLAYER_CLASS}}", "Warrior")
+	
+	return processed
+
+
+func _process_line(line: DMCompiledLine) -> void:
+	# 1. Normalize character names
+	line.character = line.character.strip_edges().capitalize()
+	
+	# 2. Apply character-specific formatting
+	if line.character in CHARACTER_COLORS:
+		var color := CHARACTER_COLORS[line.character]
+		line.text = "[color=%s]%s[/color]" % [color, line.text]
+	
+	# 3. Handle special tags
+	if "telepathy" in line.tags:
+		line.text = "[i][wave]%s[/wave][/i]" % line.text
+	
+	if "system" in line.tags:
+		line.character = ""  # Remove character for system messages
+		line.text = "[center][color=gray]%s[/color][/center]" % line.text
+```
+
+## Combining with Extra Game States
+
+Dialogue processors run at compile time, so they can't access runtime game state. However, you can use them in combination with extra game states for powerful effects:
+
+```gdscript
+# In your dialogue processor
+func _process_line(line: DMCompiledLine) -> void:
+	# Add a tag that runtime code can check
+	if line.character == "Boss":
+		line.tags.append("boss_line")
+
+# In your balloon or game code
+func show_line(dialogue_line: DialogueLine) -> void:
+	if dialogue_line.has_tag("boss_line"):
+		# Play boss music, show special effects, etc.
+		play_boss_theme()
+```
+
+## Performance Considerations
+
+<Warning>
+Dialogue processors run during compilation, not at runtime, so performance impact is minimal. However, complex processing can slow down the compilation process.
+</Warning>
+
+- Keep preprocessing logic simple and fast
+- Avoid file I/O or network operations
+- Cache expensive computations
+- Remember: This runs every time the dialogue file is saved/compiled
+
+## Debugging Tips
+
+```gdscript
+extends DMDialogueProcessor
+
+func _preprocess_line(raw_string: String) -> String:
+	print("PREPROCESS: ", raw_string)
+	var result = raw_string.replace("test", "modified")
+	print("RESULT: ", result)
+	return result
+
+func _process_line(line: DMCompiledLine) -> void:
+	print("POSTPROCESS: char=%s text=%s" % [line.character, line.text])
+	# Your modifications here
+```
+
+<Note>
+Print statements in your dialogue processor will appear in the Godot editor console when dialogue files are compiled.
+</Note>
+
+## Common Patterns
+
+### Conditional Processing
+
+```gdscript
+func _process_line(line: DMCompiledLine) -> void:
+	# Only process certain types
+	if line.type == "dialogue":
+		# Process dialogue lines
+		pass
+	elif line.type == "mutation":
+		# Process mutation lines differently
+		pass
+```
+
+### Regular Expression Replacements
+
+```gdscript
+func _preprocess_line(raw_string: String) -> String:
+	var regex = RegEx.new()
+	regex.compile("\\[emote:(\\w+)\\]")
+	var matches = regex.search_all(raw_string)
+	
+	var result = raw_string
+	for match in matches:
+		var emote_name = match.get_string(1)
+		result = result.replace(match.get_string(), get_emote_bbcode(emote_name))
+	
+	return result
+
+func get_emote_bbcode(emote_name: String) -> String:
+	return "[img]res://emotes/%s.png[/img]" % emote_name
+```
+
+## See Also
+
+- [Settings](/advanced/settings) - Configure the dialogue processor path
+- [Runtime Generation](/advanced/runtime-generation) - Generate dialogue at runtime

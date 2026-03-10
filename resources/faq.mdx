@@ -1,0 +1,115 @@
+---
+title: 'FAQ'
+description: 'Frequently asked questions about Dialogue Manager for Godot'
+---
+
+<AccordionGroup>
+  <Accordion title="How can I get help?">
+    You can get help through several channels:
+
+    - [Ask on Discord](https://nathanhoad.net/discord)
+    - [Ask on Bluesky](https://bsky.app/profile/nathanhoad.net)
+    - [Open a discussion on GitHub](https://github.com/nathanhoad/godot_dialogue_manager/discussions)
+
+    <Note>
+      If you encounter a bug, please [open an issue on GitHub](https://github.com/nathanhoad/godot_dialogue_manager/issues) and include your Godot version and Dialogue Manager version.
+    </Note>
+  </Accordion>
+
+  <Accordion title="How can I support this project?">
+    There are several ways to support the development of Dialogue Manager:
+
+    - [Become a patron on Patreon](https://patreon.com/nathanhoad)
+    - [Sponsor on GitHub](https://github.com/sponsors/nathanhoad)
+    - [Subscribe or like on YouTube](https://youtube.com/@nathan_hoad)
+
+    Every bit of support helps keep this project maintained and improved!
+  </Accordion>
+
+  <Accordion title="How do I stop my player from moving while dialogue is showing?">
+    One of the most common causes is implementing player movement inside `_process` instead of in `_unhandled_input`.
+
+    ```gdscript
+    # Good - uses _unhandled_input
+    func _unhandled_input(event):
+        if event.is_action_pressed("move_left"):
+            move_left()
+    
+    # Bad - uses _process
+    func _process(delta):
+        if Input.is_action_pressed("move_left"):
+            move_left()
+    ```
+
+    <Note>
+      Check out the [beginner dialogue example project](https://github.com/nathanhoad/beginner_godot4_dialogue/blob/finished/characters/coco/coco.gd#L17) and [the accompanying video tutorial](https://youtu.be/UhPFk8FSbd8) for a complete guide.
+    </Note>
+  </Accordion>
+
+  <Accordion title="How do I detect when dialogue has finished?">
+    Connect to the `DialogueManager.dialogue_ended` signal. The signal provides the `DialogueResource` that was used to start the dialogue chain.
+
+    ```gdscript
+    func _ready():
+        DialogueManager.dialogue_ended.connect(_on_dialogue_ended)
+    
+    func _on_dialogue_ended(resource: DialogueResource):
+        print("Dialogue ended for: ", resource.resource_path)
+        # Resume player control, trigger next event, etc.
+    ```
+  </Accordion>
+
+  <Accordion title="How do I make the example balloon look more like my game?">
+    <Warning>
+      Never edit the original example balloon directly - any changes will be overwritten when updating the addon.
+    </Warning>
+
+    Use the **Project > Tools** menu to create a copy of the example balloon into your project directory.
+
+    Once copied, you can customize it by:
+
+    1. Modifying the `theme` attached to the `Balloon` panel (most common approach)
+    2. Adjusting the layout of UI control nodes
+    3. Customizing the provided `DialogueLabel` and `DialogueResponsesMenu` nodes
+
+    <Note>
+      Familiarize yourself with the existing code before making changes to understand how the balloon system works.
+    </Note>
+  </Accordion>
+
+  <Accordion title="How do I credit Dialogue Manager in my game?">
+    To comply with the MIT license, include the license text (or a link to it) somewhere in your game, typically at the end of the credits.
+
+    You can also add a specific credit like:
+
+    > Dialogue System by Nathan Hoad
+
+    Or any similar attribution you prefer.
+  </Accordion>
+
+  <Accordion title="Why isn't something like Dialogue Manager built into Godot?">
+    There are good reasons why Dialogue Manager exists as an addon:
+
+    - **Not universal**: Not all games need dialogue systems, especially branching dialogue trees
+    - **Reduces bloat**: Including it in the engine would add unnecessary complexity for many projects
+    - **Faster iteration**: As an addon, features and fixes can be released independently of Godot engine releases
+
+    This approach keeps the core engine lean while providing powerful dialogue tools for those who need them.
+  </Accordion>
+
+  <Accordion title="How do I get you to add my great idea for a feature?">
+    You can [open an issue on GitHub](https://github.com/nathanhoad/godot_dialogue_manager/issues) with your suggestion.
+
+    <Note>
+      Features are carefully considered for wide applicability. Not all suggestions will be implemented, but those that benefit the broader community are more likely to be accepted.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+## Still have questions?
+
+If your question isn't answered here, feel free to:
+
+- [Join the Discord community](https://nathanhoad.net/discord)
+- [Open a discussion on GitHub](https://github.com/nathanhoad/godot_dialogue_manager/discussions)
+- [Reach out on Bluesky](https://bsky.app/profile/nathanhoad.net)

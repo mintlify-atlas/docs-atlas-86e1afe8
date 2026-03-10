@@ -1,0 +1,369 @@
+---
+title: Randomization
+description: Add variety to your dialogue with random line selection and weighting
+---
+
+## Random Lines
+
+If you want to pick a random line from multiple options, mark the lines with `%` at the start:
+
+```
+Nathan: I will say this.
+% Nathan: And then I might say this
+% Nathan: Or maybe this
+% Nathan: Or even this?
+```
+
+Each line starting with `%` has an equal chance of being selected. Only one will be shown.
+
+### How It Works
+
+<Steps>
+
+<Step title="Non-random line executes">
+The first line without `%` executes normally.
+</Step>
+
+<Step title="Random pool created">
+All consecutive lines starting with `%` form a random pool.
+</Step>
+
+<Step title="One line selected">
+One line is randomly chosen from the pool and executed.
+</Step>
+
+<Step title="Continue dialogue">
+Dialogue continues with whatever comes after the random group.
+</Step>
+
+</Steps>
+
+## Weighted Randomization
+
+To give certain lines a higher chance of being selected, use a number after the `%`:
+
+```
+%3 Nathan: This line has a 60% chance of being picked
+%2 Nathan: This line has a 40% chance of being picked
+```
+
+The weight determines relative probability:
+- `%3` = 3 parts out of 5 total = 60% chance
+- `%2` = 2 parts out of 5 total = 40% chance
+
+### Weight Calculations
+
+Weights are calculated as: `weight / sum_of_all_weights`
+
+```
+% Nathan: 1/6 chance (≈16.7%)
+%2 Nathan: 2/6 chance (≈33.3%)
+%3 Nathan: 3/6 chance (50%)
+```
+
+<Note>
+A line with `%` (no number) has a weight of 1 by default.
+</Note>
+
+## Multiple Random Groups
+
+Separate multiple groups of random lines with an empty line:
+
+```
+% Group 1 option A
+% Group 1 option B
+
+% Group 2 option A
+% Group 2 option B
+```
+
+Each group picks independently:
+1. First group picks one line
+2. Second group picks one line
+
+Both selected lines will execute in sequence.
+
+### Example with Multiple Groups
+
+```
+Nathan: How are you feeling?
+% Nathan: You look great today!
+% Nathan: You seem well.
+% Nathan: Looking good!
+
+Nathan: By the way...
+% Nathan: Did you sleep well?
+% Nathan: Have you eaten?
+% Nathan: Are you staying hydrated?
+```
+
+This will:
+1. Say "How are you feeling?"
+2. Pick one compliment randomly
+3. Say "By the way..."
+4. Pick one question randomly
+
+## Random Blocks
+
+You can make entire blocks of dialogue random by indenting them:
+
+```
+%
+	Nathan: This is the first block.
+	Nathan: Still the first block.
+% Nathan: This is the second possible outcome.
+```
+
+If the first random item is chosen, **both** nested lines will execute.
+
+### Random Block Example
+
+```
+Nathan: Let me tell you something.
+%
+	Nathan: Did you know that cats sleep 16 hours a day?
+	Nathan: Fascinating, right?
+%
+	Nathan: Did you know that honey never spoils?
+	Nathan: Ancient honey is still edible!
+% Nathan: Actually, I forgot what I was going to say.
+```
+
+One of three outcomes:
+1. Both lines about cats (50% chance, weight 1+1=2 lines)
+2. Both lines about honey (50% chance, weight 1+1=2 lines)  
+3. Single line about forgetting (25% chance, weight 1)
+
+<Warning>
+Actually, random blocks count as a single weighted item each, regardless of their content. So in the example above, each block has equal weight.
+</Warning>
+
+## Random Jumps
+
+You can randomly select which label to jump to:
+
+```
+~ start
+Nathan: I'm sending you somewhere random!
+% => location_a
+% => location_b
+% => location_c
+
+~ location_a
+Nathan: Welcome to location A!
+=> END
+
+~ location_b
+Nathan: Welcome to location B!
+=> END
+
+~ location_c
+Nathan: Welcome to location C!
+=> END
+```
+
+### Weighted Random Jumps
+
+```
+~ start
+Nathan: Let's go somewhere!
+%3 => common_location
+%2 => uncommon_location
+% => rare_location
+```
+
+This gives:
+- 50% chance (3/6) to jump to `common_location`
+- 33% chance (2/6) to jump to `uncommon_location`
+- 17% chance (1/6) to jump to `rare_location`
+
+## Conditional Random Lines
+
+Random lines can have conditions:
+
+```
+% Nathan: This might be said.
+% Nathan: Or this might be said.
+% [if player_level > 5] Nathan: Only if level > 5.
+% [if has_special_item] Nathan: Only if you have the item.
+```
+
+Lines with false conditions are excluded from the random pool.
+
+### Conditional Random Jump Example
+
+```
+~ start
+Nathan: Sending you somewhere appropriate!
+% => default_location
+% => default_location
+% [if player_level > 10] => advanced_location
+% [if has_completed_quest] => secret_location
+```
+
+The random pool adjusts based on which conditions are true.
+
+## Combining Features
+
+You can combine randomization with other dialogue features:
+
+```
+~ greeting
+% Nathan: [#happy] Hello there!
+% Nathan: [#neutral] Greetings.
+% Nathan: [#excited] Oh wow, it's you!
+
+Nathan: What brings you here today?
+- I need help
+	% Nathan: I'd be happy to help!
+	% Nathan: Let me see what I can do.
+	% Nathan: Of course, what do you need?
+	=> help_menu
+- Just browsing
+	% Nathan: Take your time!
+	% Nathan: Feel free to look around.
+	=> END
+```
+
+## Complete Example
+
+Here's a complete example using various randomization techniques:
+
+```
+~ start
+# Weighted random greeting
+%3 Nathan: Hey there!
+%2 Nathan: Welcome back!
+% Nathan: Oh, it's you again!
+
+# Random question (separate group)
+% Nathan: How are you today?
+% Nathan: What's new with you?
+% Nathan: How have you been?
+
+- I'm doing well
+	# Random positive response
+	% Nathan: That's great to hear!
+	% Nathan: Wonderful!
+	% Nathan: I'm glad!
+	=> ask_purpose
+- Not so great
+	# Random sympathetic response
+	% Nathan: I'm sorry to hear that.
+	% Nathan: That's unfortunate.
+	% Nathan: Hope things improve.
+	=> ask_purpose
+
+~ ask_purpose
+Nathan: Anyway, what can I do for you?
+- Quest info => random_quest
+- Shop => shop
+- Leave => random_goodbye
+
+~ random_quest
+# Random quest with weighted chances
+%5 => common_quest
+%3 => uncommon_quest
+% [if player_level > 10] => rare_quest
+% => no_quests
+
+~ common_quest
+Nathan: I have a simple delivery quest.
+=> END
+
+~ uncommon_quest
+Nathan: There's a monster that needs slaying.
+=> END
+
+~ rare_quest
+Nathan: I have a legendary quest for experienced adventurers!
+=> END
+
+~ no_quests
+Nathan: Sorry, no quests available right now.
+=> END
+
+~ shop
+Nathan: Here's my inventory.
+# Random shop keeper flavor text
+%
+	Nathan: Fresh stock today!
+	Nathan: Just got a shipment in.
+%
+	Nathan: Prices are negotiable.
+	Nathan: For you, special discount!
+% Nathan: Same old stuff, but it's good stuff.
+=> END
+
+~ random_goodbye
+% Nathan: See you later!
+% Nathan: Take care!
+% Nathan: Safe travels!
+% Nathan: Come back soon!
+=> END
+```
+
+## Tips for Using Randomization
+
+<Accordion title="Balance weights carefully">
+
+Test your weight distributions to ensure they feel right. A 90% weighted option might get repetitive, while a 1% option might never be seen.
+
+```
+# Probably too extreme
+%90 Nathan: This will get old fast.
+%10 Nathan: Players rarely see this.
+
+# More balanced
+%3 Nathan: Common greeting.
+%2 Nathan: Less common greeting.
+% Nathan: Rare greeting.
+```
+
+</Accordion>
+
+<Accordion title="Use random blocks for variety">
+
+Random blocks are great for creating variations in multi-line sequences:
+
+```
+%
+	Nathan: I love sunny days.
+	Nathan: Perfect weather for adventure!
+%
+	Nathan: Rain is nice too.
+	Nathan: Keeps things cool.
+%
+	Nathan: Any weather is fine by me.
+```
+
+</Accordion>
+
+<Accordion title="Combine with conditions">
+
+Use conditions to make random selections context-aware:
+
+```
+% Nathan: Good morning!
+% [if time_of_day == "afternoon"] Nathan: Good afternoon!
+% [if time_of_day == "evening"] Nathan: Good evening!
+% [if time_of_day == "night"] Nathan: Working late?
+```
+
+</Accordion>
+
+<Accordion title="Test your random groups">
+
+Play through multiple times to ensure:
+- All random options make sense in context
+- Weights feel natural
+- No random option breaks the flow
+- Conditional randoms work correctly
+
+</Accordion>
+
+## Next Steps
+
+- Use [variables and tags](/writing/variables-and-tags) to make random content dynamic
+- Combine with [conditions](/writing/conditions-and-mutations) for context-aware randomness
+- Learn about [labels and jumps](/writing/labels-and-jumps) to create random branching

@@ -1,0 +1,435 @@
+---
+title: Variables and Tags
+description: Make dialogue dynamic with variables and annotate lines with tags
+---
+
+## Variables in Dialogue
+
+To show game state values within dialogue, wrap them in double curlies `{{` and `}}`:
+
+```
+Nathan: The value of some property is {{SomeGlobal.some_property}}.
+Nathan: Your health is {{player_health}}.
+Nathan: You have {{gold}} gold coins.
+```
+
+The variable will be evaluated and its value inserted into the dialogue text.
+
+### Variable Examples
+
+<Accordion title="Object properties">
+
+```
+Nathan: Your name is {{PlayerData.player_name}}.
+Nathan: You are level {{PlayerData.level}}.
+Nathan: Your class is {{PlayerData.character_class}}.
+```
+
+</Accordion>
+
+<Accordion title="Method calls">
+
+```
+Nathan: The distance to town is {{GameWorld.get_distance_to("town")}} meters.
+Nathan: Your next quest is: {{QuestManager.get_next_quest_name()}}.
+```
+
+</Accordion>
+
+<Accordion title="Expressions">
+
+```
+Nathan: You need {{100 - gold}} more gold.
+Nathan: That's {{health / max_health * 100}}% health.
+Nathan: You have {{inventory.size()}} items.
+```
+
+</Accordion>
+
+<Accordion title="Conditional operators">
+
+```
+Nathan: You are {{"an adult" if age >= 18 else "a child"}}.
+Nathan: Status: {{"Poisoned!" if is_poisoned else "Healthy"}}.
+```
+
+</Accordion>
+
+## Variable Character Names
+
+Character names can also be variables:
+
+```
+{{SomeGlobal.some_character_name}}: My name was provided by the player.
+{{player_name}}: Hello, I'm {{player_name}}!
+{{npc_name}}: Nice to meet you!
+```
+
+This is useful for:
+- Player-chosen character names
+- Dynamic NPC names
+- Localized character names
+
+### Example with Variable Names
+
+```
+~ start
+set npc_name = "Bob"
+if player_level < 5
+	set npc_name = "Mysterious Stranger"
+
+{{npc_name}}: Hello there!
+{{player_name}}: Who are you?
+{{npc_name}}: I'm {{npc_name}}, nice to meet you.
+=> END
+```
+
+## Local Variables
+
+Local variables are temporary and only exist during the current conversation:
+
+```
+~ start
+set locals.counter = 0
+set locals.player_choice = "none"
+
+Nathan: What would you like to know?
+
+- Tell me about yourself [if not locals.asked_about_nathan]
+	set locals.asked_about_nathan = true
+	set locals.counter += 1
+	Nathan: Well, I'm a game developer who loves making dialogue systems.
+	=> start
+
+- What's your favorite color? [if not locals.asked_favorite_color]
+	set locals.asked_favorite_color = true
+	set locals.counter += 1
+	Nathan: I'd say blue. It's calming.
+	=> start
+
+- That's all for now
+	Nathan: You asked me {{locals.counter}} questions!
+	=> END
+```
+
+<Note>
+`locals` is a feature provided by the example balloon for temporary conversation state, not a built-in feature of Dialogue Manager itself. When the conversation ends or changes dialogue files, local variables are deleted.
+</Note>
+
+### Locals vs. Extra Game States
+
+<Steps>
+
+<Step title="Locals - Temporary">
+```
+set locals.temp_value = 10
+```
+Deleted when conversation ends. Always use `locals.` prefix.
+</Step>
+
+<Step title="Extra Game States - Persistent">
+```
+set game.persistent_value = 10
+```
+Changes persist after conversation. Accessed by state object name.
+</Step>
+
+<Step title="Global State - Permanent">
+```
+set GameState.permanent_value = 10
+```
+Changes persist across all conversations. Autoload singleton.
+</Step>
+
+</Steps>
+
+## Tags
+
+Tags allow you to annotate dialogue lines with metadata. Wrap tags in `[#` and `]`, separated by commas:
+
+```
+Nathan: [#happy, #surprised] Oh, Hello!
+```
+
+At runtime, the `DialogueLine`'s `tags` property would include `["happy", "surprised"]`.
+
+### Using Tags in Code
+
+```gdscript
+func _on_dialogue_line(line: DialogueLine) -> void:
+	if "happy" in line.tags:
+		character_sprite.play("happy_animation")
+	if "surprised" in line.tags:
+		play_sound("gasp")
+```
+
+### Tags with Values
+
+Tags can have values using the `key=value` syntax:
+
+```
+Nathan: [#mood=happy] Oh, Hello!
+Nathan: [#emotion=surprised, #volume=loud] What?!
+Coco: [#animation=wave, #speed=fast] Hi there!
+```
+
+Access tag values with the `get_tag_value` method:
+
+```gdscript
+func _on_dialogue_line(line: DialogueLine) -> void:
+	var mood = line.get_tag_value("mood")
+	if mood:
+		character_sprite.play(mood + "_animation")
+	
+	var animation = line.get_tag_value("animation")
+	var speed = line.get_tag_value("speed", "normal")  # Default to "normal"
+	if animation:
+		play_animation(animation, speed)
+```
+
+### Common Tag Use Cases
+
+<Accordion title="Character emotions">
+
+```
+Nathan: [#happy] I'm so glad you're here!
+Nathan: [#sad] I have some bad news...
+Nathan: [#angry] How dare you!
+Nathan: [#neutral] That's interesting.
+```
+
+Use these to trigger facial expressions or animations.
+
+</Accordion>
+
+<Accordion title="Camera directions">
+
+```
+Nathan: [#camera=closeup] This is important.
+Nathan: [#camera=wide, #focus=background] Look at that view!
+Coco: [#camera=over_shoulder] Let me show you something.
+```
+
+Use these to control camera movements during dialogue.
+
+</Accordion>
+
+<Accordion title="Sound effects">
+
+```
+Nathan: [#sfx=laugh] That's hilarious!
+Nathan: [#sfx=sigh] If only...
+Nathan: [#sfx=gasp, #volume=loud] Oh no!
+```
+
+Use these to trigger sound effects synchronized with dialogue.
+
+</Accordion>
+
+<Accordion title="Character animations">
+
+```
+Nathan: [#anim=wave] Hello there!
+Nathan: [#anim=point, #target=door] Through that door.
+Coco: [#anim=think] Let me consider...
+```
+
+Use these to trigger character animations.
+
+</Accordion>
+
+<Accordion title="Quest markers">
+
+```
+Nathan: [#quest=main_quest_1] Find the ancient artifact.
+Nathan: [#quest=side_quest_3, #reward=100] Collect 10 herbs.
+```
+
+Use these to associate dialogue with quests.
+
+</Accordion>
+
+<Accordion title="UI hints">
+
+```
+Nathan: [#ui=show_map] Look at your map.
+Nathan: [#ui=highlight_inventory] Check your inventory.
+Nathan: [#ui=tutorial_prompt] Press Q to use your ability.
+```
+
+Use these to trigger UI changes during dialogue.
+
+</Accordion>
+
+## Combining Variables and Tags
+
+You can use both variables and tags in the same line:
+
+```
+Nathan: [#happy] You have {{gold}} gold coins!
+Nathan: [#emotion=surprised, #intensity=high] {{player_name}}! I can't believe it's you!
+Coco: [#anim=celebrate] You're level {{player_level}} already!
+```
+
+## Complete Example
+
+Here's a complete example using variables and tags:
+
+```
+~ start
+set locals.conversation_mood = "neutral"
+
+Nathan: [#anim=wave, #emotion=happy] Hello, {{player_name}}!
+Nathan: [#camera=closeup] I see you're level {{player_level}}.
+
+if player_level >= 10
+	set locals.conversation_mood = "impressed"
+	Nathan: [#emotion=impressed] That's quite impressive!
+elif player_level >= 5
+	set locals.conversation_mood = "encouraging"
+	Nathan: [#emotion=encouraging] You're making good progress!
+else
+	set locals.conversation_mood = "supportive"
+	Nathan: [#emotion=supportive] Everyone starts somewhere!
+
+Nathan: You have {{gold}} gold and {{inventory_count}} items.
+
+if gold < 10
+	Nathan: [#emotion=concerned] You're running low on gold.
+	Nathan: [#ui=highlight_gold] You should do some quests.
+
+Nathan: What would you like to do?
+- Buy item [if gold >= 50]
+	set gold -= 50
+	set inventory_count += 1
+	Nathan: [#anim=give, #sfx=purchase] Here you go!
+	Nathan: You now have {{inventory_count}} items.
+	=> start
+- Sell item [if inventory_count > 0]
+	set gold += 30
+	set inventory_count -= 1
+	Nathan: [#anim=take, #sfx=coins] Thanks!
+	Nathan: You now have {{gold}} gold.
+	=> start
+- Check stats
+	Nathan: [#ui=show_stats] Here are your stats:
+	Nathan: Level: {{player_level}}
+	Nathan: Gold: {{gold}}
+	Nathan: Items: {{inventory_count}}
+	Nathan: Mood: {{locals.conversation_mood}}
+	=> start
+- Goodbye
+	Nathan: [#anim=wave, #emotion=friendly] Safe travels, {{player_name}}!
+	=> END
+```
+
+## Accessing Variables and Tags in Code
+
+### Reading Variables
+
+Variables in dialogue are evaluated when the line is processed:
+
+```gdscript
+# In your game code
+var GameState = {
+	"player_name": "Hero",
+	"gold": 150,
+	"level": 5
+}
+
+# Variables are automatically resolved when dialogue runs
+# "You have {{gold}} gold" becomes "You have 150 gold"
+```
+
+### Reading Tags
+
+```gdscript
+func _on_dialogue_line(line: DialogueLine) -> void:
+	# Check if a tag exists
+	if "happy" in line.tags:
+		print("Character is happy!")
+	
+	# Get all tags
+	print("All tags: ", line.tags)  # ["emotion=happy", "anim=wave"]
+	
+	# Get specific tag value
+	var emotion = line.get_tag_value("emotion")
+	if emotion:
+		character.play_emotion(emotion)
+	
+	# Get tag value with default
+	var anim = line.get_tag_value("anim", "idle")
+	character.play_animation(anim)
+	
+	# Handle multiple tags
+	for tag in line.tags:
+		if tag.begins_with("sfx="):
+			var sfx_name = tag.split("=")[1]
+			audio_player.play(sfx_name)
+```
+
+## Tips for Variables and Tags
+
+<Accordion title="Keep variable names descriptive">
+
+```
+# Good
+Nathan: You have {{player_health}} health.
+Nathan: Your sword deals {{weapon_damage}} damage.
+
+# Unclear
+Nathan: You have {{h}} health.
+Nathan: Your sword deals {{d}} damage.
+```
+
+</Accordion>
+
+<Accordion title="Use consistent tag naming">
+
+Establish a naming convention for your project:
+
+```
+# Consistent format
+[#emotion=happy]
+[#animation=wave]
+[#camera=closeup]
+
+# Inconsistent (avoid)
+[#happy]
+[#waveAnim]
+[#CAMERA_CLOSEUP]
+```
+
+</Accordion>
+
+<Accordion title="Validate variables exist">
+
+Ensure variables referenced in dialogue exist in your game state:
+
+```
+# Safe
+Nathan: You have {{gold ?? 0}} gold.
+Nathan: Player name: {{player_name ?? "Unknown"}}.
+```
+
+</Accordion>
+
+<Accordion title="Document your tags">
+
+Maintain a list of available tags for your team:
+
+```
+# Project Tags Documentation
+# Emotions: happy, sad, angry, surprised, neutral
+# Animations: wave, point, think, celebrate
+# Camera: closeup, wide, over_shoulder
+# UI: show_map, highlight_inventory, show_stats
+```
+
+</Accordion>
+
+## Next Steps
+
+- Learn about [conditions and mutations](/writing/conditions-and-mutations) to control variables
+- Use [basic dialogue](/writing/basic-dialogue) features with variables
+- Explore [concurrent lines](/writing/concurrent-lines) with different tags per character

@@ -1,0 +1,875 @@
+---
+title: "C# Wrapper API"
+description: "Complete C# API reference for Dialogue Manager"
+---
+
+The Dialogue Manager provides a comprehensive C# wrapper that allows seamless integration with C# projects. This wrapper provides type-safe access to all core functionality.
+
+## Namespace
+
+```csharp
+using DialogueManagerRuntime;
+```
+
+All C# classes and types are contained within the `DialogueManagerRuntime` namespace.
+
+## DialogueManager Class
+
+The main static class for interacting with the Dialogue Manager from C#.
+
+### Properties
+
+<ParamField path="GameStates" type="Godot.Collections.Array">
+  Array of additional game state objects to search for properties and methods during dialogue execution.
+  
+  ```csharp
+  DialogueManager.GameStates = new Godot.Collections.Array { myStateObject };
+  ```
+</ParamField>
+
+<ParamField path="IncludeSingletons" type="bool">
+  Whether to include autoload singletons when searching for state properties and methods.
+  
+  ```csharp
+  DialogueManager.IncludeSingletons = true;
+  ```
+</ParamField>
+
+<ParamField path="IncludeClasses" type="bool">
+  Whether to include C# static classes when searching for state properties and methods.
+  
+  ```csharp
+  DialogueManager.IncludeClasses = true;
+  ```
+</ParamField>
+
+<ParamField path="TranslationSource" type="TranslationSource">
+  The source to use for translations. Options: `None`, `Guess`, `CSV`, `PO`.
+  
+  ```csharp
+  DialogueManager.TranslationSource = TranslationSource.CSV;
+  ```
+</ParamField>
+
+<ParamField path="GetCurrentScene" type="Func<Node>">
+  Delegate that returns the current scene node for state resolution.
+  
+  ```csharp
+  DialogueManager.GetCurrentScene = () => GetTree().CurrentScene;
+  ```
+</ParamField>
+
+### Core Methods
+
+#### ShowExampleDialogueBalloon
+
+Display dialogue using the built-in example balloon.
+
+```csharp
+public static CanvasLayer ShowExampleDialogueBalloon(
+    Resource dialogueResource, 
+    string key = "", 
+    Array<Variant>? extraGameStates = null
+)
+```
+
+<ParamField path="dialogueResource" type="Resource" required>
+  The dialogue resource to display
+</ParamField>
+
+<ParamField path="key" type="string" default="">
+  The title/label to start from
+</ParamField>
+
+<ParamField path="extraGameStates" type="Array<Variant>">
+  Additional objects to search for state properties
+</ParamField>
+
+<CodeGroup>
+```csharp C# Example
+var dialogue = GD.Load<Resource>("res://example.dialogue");
+var balloon = DialogueManager.ShowExampleDialogueBalloon(dialogue, "start");
+```
+
+```gdscript GDScript Equivalent
+var dialogue = load("res://example.dialogue")
+var balloon = DialogueManager.show_example_dialogue_balloon(dialogue, "start")
+```
+</CodeGroup>
+
+#### ShowDialogueBalloon
+
+Display dialogue using your configured custom balloon.
+
+```csharp
+public static Node ShowDialogueBalloon(
+    Resource dialogueResource, 
+    string key = "", 
+    Array<Variant>? extraGameStates = null
+)
+```
+
+<ParamField path="dialogueResource" type="Resource" required>
+  The dialogue resource to display
+</ParamField>
+
+<ParamField path="key" type="string" default="">
+  The title/label to start from
+</ParamField>
+
+<ParamField path="extraGameStates" type="Array<Variant>">
+  Additional objects to search for state properties
+</ParamField>
+
+<CodeGroup>
+```csharp C# Example
+var dialogue = GD.Load<Resource>("res://example.dialogue");
+var balloon = DialogueManager.ShowDialogueBalloon(dialogue, "start");
+```
+
+```gdscript GDScript Equivalent
+var dialogue = load("res://example.dialogue")
+var balloon = DialogueManager.show_dialogue_balloon(dialogue, "start")
+```
+</CodeGroup>
+
+#### ShowDialogueBalloonScene
+
+Display dialogue using a specific balloon scene.
+
+```csharp
+public static Node ShowDialogueBalloonScene(
+    string balloonScene, 
+    Resource dialogueResource, 
+    string key = "", 
+    Array<Variant>? extraGameStates = null
+)
+```
+
+Overloads also accept `PackedScene` or `Node` as the first parameter.
+
+<ParamField path="balloonScene" type="string | PackedScene | Node" required>
+  Path to balloon scene, packed scene, or instantiated balloon node
+</ParamField>
+
+<ParamField path="dialogueResource" type="Resource" required>
+  The dialogue resource to display
+</ParamField>
+
+<ParamField path="key" type="string" default="">
+  The title/label to start from
+</ParamField>
+
+<ParamField path="extraGameStates" type="Array<Variant>">
+  Additional objects to search for state properties
+</ParamField>
+
+```csharp
+// Using path
+var balloon = DialogueManager.ShowDialogueBalloonScene(
+    "res://balloons/custom_balloon.tscn",
+    dialogue,
+    "start"
+);
+
+// Using PackedScene
+var scene = GD.Load<PackedScene>("res://balloons/custom_balloon.tscn");
+var balloon = DialogueManager.ShowDialogueBalloonScene(scene, dialogue, "start");
+
+// Using instantiated Node
+var balloonNode = myBalloonScene.Instantiate();
+var balloon = DialogueManager.ShowDialogueBalloonScene(balloonNode, dialogue, "start");
+```
+
+#### GetNextDialogueLine
+
+Manually retrieve the next line of dialogue.
+
+```csharp
+public static async Task<DialogueLine?> GetNextDialogueLine(
+    Resource dialogueResource, 
+    string key = "", 
+    Array<Variant>? extraGameStates = null, 
+    MutationBehaviour mutation_behaviour = MutationBehaviour.Wait
+)
+```
+
+<ParamField path="dialogueResource" type="Resource" required>
+  The dialogue resource to traverse
+</ParamField>
+
+<ParamField path="key" type="string" default="">
+  The title/label to start from (or continue from using the line's `NextId`)
+</ParamField>
+
+<ParamField path="extraGameStates" type="Array<Variant>">
+  Additional objects to search for state properties
+</ParamField>
+
+<ParamField path="mutation_behaviour" type="MutationBehaviour" default="Wait">
+  How to handle mutations: `Wait` (default), `DoNotWait`, or `Skip`
+</ParamField>
+
+<CodeGroup>
+```csharp C# Example
+var dialogue = GD.Load<Resource>("res://example.dialogue");
+var line = await DialogueManager.GetNextDialogueLine(dialogue, "start");
+
+if (line != null)
+{
+    GD.Print($"{line.Character}: {line.Text}");
+    
+    // Get next line
+    var nextLine = await DialogueManager.GetNextDialogueLine(dialogue, line.NextId);
+}
+```
+
+```gdscript GDScript Equivalent
+var dialogue = load("res://example.dialogue")
+var line = await DialogueManager.get_next_dialogue_line(dialogue, "start")
+
+if line != null:
+    print("%s: %s" % [line.character, line.text])
+    
+    # Get next line
+    var next_line = await DialogueManager.get_next_dialogue_line(dialogue, line.next_id)
+```
+</CodeGroup>
+
+<Note>
+Returns `null` when the dialogue ends.
+</Note>
+
+#### GetLine
+
+Retrieve a single line without advancing dialogue state.
+
+```csharp
+public static async Task<DialogueLine?> GetLine(
+    Resource dialogueResource, 
+    string key = "", 
+    Array<Variant>? extraGameStates = null
+)
+```
+
+<ParamField path="dialogueResource" type="Resource" required>
+  The dialogue resource
+</ParamField>
+
+<ParamField path="key" type="string" default="">
+  The title/label of the line to retrieve
+</ParamField>
+
+<ParamField path="extraGameStates" type="Array<Variant>">
+  Additional objects to search for state properties
+</ParamField>
+
+```csharp
+var line = await DialogueManager.GetLine(dialogue, "greeting");
+GD.Print(line?.Text);
+```
+
+#### CreateResourceFromText
+
+Generate a dialogue resource from a string at runtime.
+
+```csharp
+public static Resource CreateResourceFromText(string text)
+```
+
+<ParamField path="text" type="string" required>
+  Dialogue script text to parse
+</ParamField>
+
+```csharp
+var resource = DialogueManager.CreateResourceFromText(
+    "~ greeting\nNathan: Hello, world!"
+);
+var balloon = DialogueManager.ShowExampleDialogueBalloon(resource, "greeting");
+```
+
+<Note>
+This method will throw an error if there are syntax errors in the dialogue text. A balloon or dialogue must be opened for the dialogue to attach to.
+</Note>
+
+#### Mutate
+
+Execute a mutation dictionary against game state.
+
+```csharp
+public static async void Mutate(
+    Dictionary mutation, 
+    Array<Variant>? extraGameStates = null, 
+    bool isInlineMutation = false
+)
+```
+
+<ParamField path="mutation" type="Dictionary" required>
+  The mutation to execute
+</ParamField>
+
+<ParamField path="extraGameStates" type="Array<Variant>">
+  Additional objects to search for state properties
+</ParamField>
+
+<ParamField path="isInlineMutation" type="bool" default="false">
+  Whether this is an inline mutation
+</ParamField>
+
+```csharp
+var mutation = new Dictionary
+{
+    { "expression", "player_health = 100" }
+};
+await DialogueManager.Mutate(mutation);
+```
+
+### Translation Methods
+
+#### StaticIdToLineIds
+
+Convert a static translation ID to an array of line IDs.
+
+```csharp
+public static Array<string> StaticIdToLineIds(
+    Resource dialogueResource, 
+    string staticId
+)
+```
+
+```csharp
+var lineIds = DialogueManager.StaticIdToLineIds(dialogue, "greeting_001");
+```
+
+#### StaticIdToLineId
+
+Convert a static translation ID to a single line ID.
+
+```csharp
+public static string StaticIdToLineId(
+    Resource dialogueResource, 
+    string staticId
+)
+```
+
+```csharp
+var lineId = DialogueManager.StaticIdToLineId(dialogue, "greeting_001");
+```
+
+### Utility Methods
+
+#### GetErrorMessage
+
+Get a human-readable error message for an error code.
+
+```csharp
+public static string GetErrorMessage(int error)
+```
+
+```csharp
+var errorMsg = DialogueManager.GetErrorMessage(Error.FileNotFound);
+GD.PrintErr(errorMsg);
+```
+
+## Event Handlers
+
+The C# wrapper provides strongly-typed event handlers for all Dialogue Manager signals.
+
+### DialogueStarted
+
+Emitted when dialogue begins.
+
+```csharp
+public static event DialogueStartedEventHandler? DialogueStarted;
+// Delegate: void DialogueStartedEventHandler(Resource dialogueResource)
+```
+
+<Tabs>
+  <Tab title="C# Event Handler">
+    ```csharp
+    DialogueManager.DialogueStarted += (Resource dialogueResource) =>
+    {
+        GD.Print("Dialogue started!");
+    };
+    ```
+  </Tab>
+  <Tab title="GDScript Equivalent">
+    ```gdscript
+    func _ready():
+        DialogueManager.dialogue_started.connect(_on_dialogue_started)
+    
+    func _on_dialogue_started(dialogue_resource: Resource):
+        print("Dialogue started!")
+    ```
+  </Tab>
+</Tabs>
+
+### DialogueEnded
+
+Emitted when dialogue finishes.
+
+```csharp
+public static event DialogueEndedEventHandler? DialogueEnded;
+// Delegate: void DialogueEndedEventHandler(Resource dialogueResource)
+```
+
+```csharp
+DialogueManager.DialogueEnded += (Resource dialogueResource) =>
+{
+    GD.Print("Dialogue ended!");
+};
+```
+
+### PassedLabel
+
+Emitted when dialogue passes a title/label.
+
+```csharp
+public static event PassedLabelEventHandler? PassedLabel;
+// Delegate: void PassedLabelEventHandler(string label)
+```
+
+```csharp
+DialogueManager.PassedLabel += (string label) =>
+{
+    GD.Print($"Passed label: {label}");
+};
+```
+
+### GotDialogue
+
+Emitted when a new dialogue line is retrieved.
+
+```csharp
+public static event GotDialogueEventHandler? GotDialogue;
+// Delegate: void GotDialogueEventHandler(DialogueLine line)
+```
+
+```csharp
+DialogueManager.GotDialogue += (DialogueLine line) =>
+{
+    GD.Print($"{line.Character}: {line.Text}");
+};
+```
+
+### Mutated
+
+Emitted when a mutation is executed.
+
+```csharp
+public static event MutatedEventHandler? Mutated;
+// Delegate: void MutatedEventHandler(Dictionary mutation)
+```
+
+```csharp
+DialogueManager.Mutated += (Dictionary mutation) =>
+{
+    GD.Print($"Mutation executed: {mutation}");
+};
+```
+
+## DialogueLine Class
+
+Represents a single line of dialogue with all associated data.
+
+### Properties
+
+<ParamField path="Id" type="string">
+  Unique identifier for this line
+</ParamField>
+
+<ParamField path="Type" type="string">
+  Line type: `"dialogue"` or `"mutation"`
+</ParamField>
+
+<ParamField path="NextId" type="string">
+  ID of the next line to display
+</ParamField>
+
+<ParamField path="Character" type="string">
+  Name of the speaking character
+</ParamField>
+
+<ParamField path="Text" type="string">
+  The dialogue text (with BB code)
+</ParamField>
+
+<ParamField path="TranslationKey" type="string">
+  Translation key for localization
+</ParamField>
+
+<ParamField path="Responses" type="Array<DialogueResponse>">
+  Array of available response options
+</ParamField>
+
+<ParamField path="Time" type="string?">
+  Timing information for the line
+</ParamField>
+
+<ParamField path="Speeds" type="Dictionary">
+  Text speed modifications
+</ParamField>
+
+<ParamField path="InlineMutations" type="Array<Array>">
+  Inline mutations within the dialogue text
+</ParamField>
+
+<ParamField path="ConcurrentLines" type="Array<DialogueLine>">
+  Lines that should display simultaneously
+</ParamField>
+
+<ParamField path="ExtraGameStates" type="Array<Variant>">
+  Additional game state objects for this line
+</ParamField>
+
+<ParamField path="Tags" type="Array<string>">
+  Tags associated with this line
+</ParamField>
+
+### Methods
+
+#### HasTag
+
+Check if a tag exists on this line.
+
+```csharp
+public bool HasTag(string tagName)
+```
+
+```csharp
+if (line.HasTag("angry"))
+{
+    // Play angry animation
+}
+```
+
+#### GetTagValue
+
+Get the value of a tag.
+
+```csharp
+public string GetTagValue(string tagName)
+```
+
+```csharp
+var emotion = line.GetTagValue("emotion");
+// For tag "emotion=happy", returns "happy"
+```
+
+### Example Usage
+
+<CodeGroup>
+```csharp C# Example
+var dialogue = GD.Load<Resource>("res://conversation.dialogue");
+var line = await DialogueManager.GetNextDialogueLine(dialogue, "start");
+
+while (line != null)
+{
+    GD.Print($"{line.Character}: {line.Text}");
+    
+    if (line.HasTag("emotion"))
+    {
+        var emotion = line.GetTagValue("emotion");
+        GD.Print($"Emotion: {emotion}");
+    }
+    
+    if (line.Responses.Count > 0)
+    {
+        // Handle responses
+        foreach (var response in line.Responses)
+        {
+            if (response.IsAllowed)
+            {
+                GD.Print($"- {response.Text}");
+            }
+        }
+        break;
+    }
+    
+    line = await DialogueManager.GetNextDialogueLine(dialogue, line.NextId);
+}
+```
+
+```gdscript GDScript Equivalent
+var dialogue = load("res://conversation.dialogue")
+var line = await DialogueManager.get_next_dialogue_line(dialogue, "start")
+
+while line != null:
+    print("%s: %s" % [line.character, line.text])
+    
+    if line.has_tag("emotion"):
+        var emotion = line.get_tag_value("emotion")
+        print("Emotion: %s" % emotion)
+    
+    if line.responses.size() > 0:
+        # Handle responses
+        for response in line.responses:
+            if response.is_allowed:
+                print("- %s" % response.text)
+        break
+    
+    line = await DialogueManager.get_next_dialogue_line(dialogue, line.next_id)
+```
+</CodeGroup>
+
+## DialogueResponse Class
+
+Represents a response option in dialogue.
+
+### Properties
+
+<ParamField path="NextId" type="string">
+  ID of the line to jump to if this response is selected
+</ParamField>
+
+<ParamField path="IsAllowed" type="bool">
+  Whether this response is available based on conditions
+</ParamField>
+
+<ParamField path="ConditionAsText" type="string">
+  The condition expression as text
+</ParamField>
+
+<ParamField path="Text" type="string">
+  The response text
+</ParamField>
+
+<ParamField path="TranslationKey" type="string">
+  Translation key for localization
+</ParamField>
+
+<ParamField path="Tags" type="Array<string>">
+  Tags associated with this response
+</ParamField>
+
+### Methods
+
+#### GetTagValue
+
+Get the value of a tag on this response.
+
+```csharp
+public string GetTagValue(string tagName)
+```
+
+```csharp
+var priority = response.GetTagValue("priority");
+```
+
+### Example Usage
+
+```csharp
+// Connecting to response selection
+responsesMenu.Connect("response_selected", Callable.From((DialogueResponse response) =>
+{
+    GD.Print($"Selected: {response.Text}");
+    
+    // Continue dialogue from the response's next ID
+    var nextLine = await DialogueManager.GetNextDialogueLine(dialogue, response.NextId);
+}));
+```
+
+## Enums
+
+### MutationBehaviour
+
+Controls how mutations are handled during dialogue execution.
+
+```csharp
+public enum MutationBehaviour
+{
+    Wait,        // Wait for mutation to complete
+    DoNotWait,   // Continue immediately without waiting
+    Skip         // Skip the mutation entirely
+}
+```
+
+```csharp
+var line = await DialogueManager.GetNextDialogueLine(
+    dialogue, 
+    "start", 
+    null, 
+    MutationBehaviour.DoNotWait
+);
+```
+
+### TranslationSource
+
+Specifies the source for dialogue translations.
+
+```csharp
+public enum TranslationSource
+{
+    None,   // No translation
+    Guess,  // Auto-detect from project settings
+    CSV,    // Use CSV translation files
+    PO      // Use PO translation files
+}
+```
+
+```csharp
+DialogueManager.TranslationSource = TranslationSource.CSV;
+```
+
+## State Management
+
+When resolving state properties and methods, the Dialogue Manager searches in the following order:
+
+1. **Extra Game States** - Objects passed in `extraGameStates` parameter
+2. **Current Scene** - The scene returned from `GetTree().CurrentScene`
+3. **Autoloads** - If `IncludeSingletons` is enabled
+4. **Static Classes** - If `IncludeClasses` is enabled
+
+### Exposing Properties
+
+Properties must have the `[Export]` attribute to be visible to the Dialogue Manager.
+
+```csharp
+[Export] public string PlayerName { get; set; } = "Player";
+[Export] public int PlayerHealth { get; set; } = 100;
+[Export] public bool HasKey { get; set; } = false;
+```
+
+In your dialogue:
+
+```
+Nathan: Hello {{PlayerName}}!
+Nathan: You have {{PlayerHealth}} health.
+
+if HasKey:
+    Nathan: You can unlock the door.
+```
+
+### Custom Mutations
+
+Mutations should be async methods returning `Task` or `Task<Variant>`.
+
+<Tabs>
+  <Tab title="Void Mutation">
+    ```csharp
+    public async Task AskForName()
+    {
+        var dialog = GD.Load<PackedScene>("res://ui/name_dialog.tscn")
+            .Instantiate() as AcceptDialog;
+        GetTree().Root.AddChild(dialog);
+        dialog.PopupCentered();
+        await ToSignal(dialog, "confirmed");
+        PlayerName = dialog.GetNode<LineEdit>("NameEdit").Text;
+        dialog.QueueFree();
+    }
+    ```
+    
+    Usage in dialogue:
+    ```
+    do AskForName()
+    Nathan: Hello {{PlayerName}}!
+    ```
+  </Tab>
+  <Tab title="Returning Mutation">
+    ```csharp
+    public async Task<Variant> AskForName()
+    {
+        var dialog = GD.Load<PackedScene>("res://ui/name_dialog.tscn")
+            .Instantiate() as AcceptDialog;
+        GetTree().Root.AddChild(dialog);
+        dialog.PopupCentered();
+        await ToSignal(dialog, "confirmed");
+        var name = dialog.GetNode<LineEdit>("NameEdit").Text;
+        dialog.QueueFree();
+        return name;
+    }
+    ```
+    
+    Usage in dialogue:
+    ```
+    set player_name = await AskForName()
+    Nathan: Hello {{player_name}}!
+    ```
+  </Tab>
+</Tabs>
+
+## Complete Example
+
+Here's a complete example of using the C# wrapper in a game:
+
+```csharp
+using Godot;
+using DialogueManagerRuntime;
+using Godot.Collections;
+
+public partial class DialogueController : Node
+{
+    [Export] public string PlayerName { get; set; } = "Player";
+    [Export] public int PlayerHealth { get; set; } = 100;
+    
+    private Resource dialogue;
+    
+    public override void _Ready()
+    {
+        // Load dialogue
+        dialogue = GD.Load<Resource>("res://dialogue/main.dialogue");
+        
+        // Set up event handlers
+        DialogueManager.DialogueStarted += OnDialogueStarted;
+        DialogueManager.DialogueEnded += OnDialogueEnded;
+        DialogueManager.GotDialogue += OnGotDialogue;
+        
+        // Configure state resolution
+        DialogueManager.IncludeSingletons = true;
+    }
+    
+    public void StartDialogue(string startLabel = "start")
+    {
+        DialogueManager.ShowDialogueBalloon(dialogue, startLabel);
+    }
+    
+    private void OnDialogueStarted(Resource resource)
+    {
+        GD.Print("Dialogue started");
+        GetTree().Paused = true;
+    }
+    
+    private void OnDialogueEnded(Resource resource)
+    {
+        GD.Print("Dialogue ended");
+        GetTree().Paused = false;
+    }
+    
+    private void OnGotDialogue(DialogueLine line)
+    {
+        GD.Print($"{line.Character}: {line.Text}");
+        
+        // Handle special tags
+        if (line.HasTag("emotion"))
+        {
+            var emotion = line.GetTagValue("emotion");
+            PlayEmotionAnimation(emotion);
+        }
+    }
+    
+    public async Task GiveItem(string itemName)
+    {
+        GD.Print($"Giving item: {itemName}");
+        await ToSignal(GetTree().CreateTimer(1.0), "timeout");
+    }
+    
+    private void PlayEmotionAnimation(string emotion)
+    {
+        // Play animation based on emotion
+    }
+    
+    public override void _ExitTree()
+    {
+        // Clean up event handlers
+        DialogueManager.DialogueStarted -= OnDialogueStarted;
+        DialogueManager.DialogueEnded -= OnDialogueEnded;
+        DialogueManager.GotDialogue -= OnGotDialogue;
+    }
+}
+```
+
+## Additional Resources
+
+- [C# Example Projects on Itch.io](https://nathanhoad.itch.io)
+- See the [GDScript API](/api/dialogue-manager) for equivalent GDScript methods
+- Check the [Writing Dialogue](/writing/conditions-and-mutations) guide for more mutation examples

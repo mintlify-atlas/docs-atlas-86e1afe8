@@ -1,0 +1,177 @@
+---
+title: "Settings"
+description: "Configure Dialogue Manager's editor and runtime behavior"
+---
+
+Dialogue Manager settings are found in **Project Settings** at the bottom of the General tab under the "Dialogue Manager" section.
+
+## Runtime Settings
+
+### State Autoload Shortcuts
+
+An array of autoload names that you want to have shortcuts to in your dialogue.
+
+<CodeGroup>
+```gdscript Without Shortcuts
+if SomeGlobal.some_property > 0:
+  Nathan: There are {{SomeGlobal.some_property}} of them!
+```
+
+```gdscript With Shortcuts
+# After adding "SomeGlobal" to State Autoload Shortcuts
+if some_property > 0:
+  Nathan: There are {{some_property}} of them!
+```
+</CodeGroup>
+
+This setting allows you to reference properties from your autoloads directly without prefixing the autoload name.
+
+### Balloon Path
+
+The balloon scene to instantiate when using `DialogueManager.show_dialogue_balloon()`.
+
+<Tabs>
+  <Tab title="GDScript">
+    ```gdscript
+    # Set in Project Settings, then use:
+    var dialogue = load("res://example.dialogue")
+    DialogueManager.show_dialogue_balloon(dialogue, "start")
+    ```
+  </Tab>
+  <Tab title="C#">
+    ```csharp
+    using DialogueManagerRuntime;
+    
+    // Set in Project Settings, then use:
+    var dialogue = GD.Load<Resource>("res://example.dialogue");
+    DialogueManager.ShowDialogueBalloon(dialogue, "start");
+    ```
+  </Tab>
+</Tabs>
+
+Configure this to point to your custom balloon scene so you don't need to specify it every time.
+
+### Ignore Missing State Values
+
+<Warning>
+This is an advanced setting. Only enable this if you understand the implications.
+</Warning>
+
+When enabled, suppresses errors when properties or mutations are missing from state. This can be useful for prototyping or when you want dialogue to gracefully handle missing state.
+
+```gdscript
+# With this enabled, if some_missing_var doesn't exist:
+Nathan: I have {{some_missing_var}} items.
+# Won't throw an error, will just show empty value
+```
+
+### Warn About Method/Property/Signal Name Conflicts
+
+<Note>
+This setting only works in debug builds and has no effect in release builds.
+</Note>
+
+When enabled, displays a warning in the Debugger panel if there is more than one property, method, or signal sharing the same name at the top level. This includes:
+
+- Extra game states
+- Current scene
+- Autoload shortcuts
+
+This helps you avoid ambiguous references in your dialogue.
+
+## Editor Settings
+
+### Wrap Long Lines
+
+Controls whether lines in the dialogue editor wrap or horizontally scroll.
+
+- **Enabled**: Long lines wrap to fit the editor width
+- **Disabled**: Long lines require horizontal scrolling
+
+### New File Template
+
+Start new dialogue files with this content by default. Useful for adding standard headers, imports, or initial structure to every new dialogue file.
+
+```
+~ start
+
+Nathan: Edit this template in Project Settings!
+```
+
+### Missing Translations Are Errors
+
+When enabled, any dialogue lines that don't have a static ID will be treated as errors.
+
+<Note>
+This is useful when working with translation workflows that require every line to have an explicit ID.
+</Note>
+
+### Include Characters in Translatable Strings List
+
+When exporting translations, include character names in the POT export.
+
+### Default CSV Locale
+
+The default locale code to use when first exporting a translations CSV file (e.g., "en", "es", "fr").
+
+### Include Character in Translation Exports
+
+<Warning>
+Advanced setting - enable "Advanced" in Project Settings to see this option.
+</Warning>
+
+Includes a `_character` column in CSV exports that shows which character was speaking each line of dialogue. This can help translators understand context.
+
+### Include Notes in Translation Exports
+
+<Warning>
+Advanced setting - enable "Advanced" in Project Settings to see this option.
+</Warning>
+
+Includes a `_notes` column in CSV exports for documentation comments that appear in your dialogue files.
+
+### Dialogue Processor Path
+
+<Warning>
+Advanced setting - enable "Advanced" in Project Settings to see this option.
+</Warning>
+
+A path to a class that extends `DMDialogueProcessor`. Used for pre-processing raw lines and post-processing compiled lines.
+
+See [Custom Processing](/advanced/custom-processing) for more details.
+
+### Custom Test Scene Path
+
+<Warning>
+Advanced setting - enable "Advanced" in Project Settings to see this option.
+</Warning>
+
+Use a custom test scene when running "Test" from the dialogue editor. The scene must extend `BaseDialogueTestScene`.
+
+This allows you to customize the test environment with your game's specific setup, UI, or state.
+
+### Extra Auto Complete Script Sources
+
+<Warning>
+Advanced setting - enable "Advanced" in Project Settings to see this option.
+</Warning>
+
+Add script files to check for top-level auto-complete members.
+
+Any scripts added here are assumed to be available in all dialogue files. This is useful if your balloon or other runtime components insert themselves into `extra_game_states` at runtime.
+
+```gdscript
+# If your balloon adds itself to extra_game_states,
+# add the balloon script here to get autocomplete for its methods
+```
+
+## Best Practices
+
+<Note>
+**Start Simple**: Begin with just the **Balloon Path** setting configured. Add other settings as your project's needs grow.
+</Note>
+
+1. **Use State Autoload Shortcuts** sparingly - only for frequently accessed autoloads
+2. **Enable translation settings** early if you plan to localize your game
+3. **Custom Test Scene** helps catch issues early when your game has complex state requirements
+4. **Dialogue Processor** is powerful but adds complexity - only use when necessary

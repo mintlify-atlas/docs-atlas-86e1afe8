@@ -1,0 +1,101 @@
+---
+title: Installation
+description: Get Dialogue Manager installed in your Godot 4.4+ project
+---
+
+Dialogue Manager is an addon for Godot 4.4+ that provides a stateless branching dialogue editor and runtime. This guide will walk you through installing and setting up the plugin in your project.
+
+## Prerequisites
+
+- Godot 4.4 or later
+
+<Note>
+  For older versions of Godot, see the [compatibility guide](https://github.com/nathanhoad/godot_dialogue_manager):
+  - Godot 4.3: Use Dialogue Manager v3.3
+  - Godot ≤4.3: Use Dialogue Manager v2.x
+  - Godot 3: Use Dialogue Manager v1.x
+</Note>
+
+## Installation Methods
+
+<Tabs>
+  <Tab title="Asset Library">
+    <Steps>
+      <Step title="Open the Asset Library">
+        In Godot, click the **AssetLib** tab at the top of the editor.
+      </Step>
+      
+      <Step title="Search for Dialogue Manager">
+        Search for "Dialogue Manager" in the search bar and select the addon from the results.
+      </Step>
+      
+      <Step title="Download and install">
+        Click **Download**, then **Install** when the download completes. Make sure the installation path is set to `res://addons/dialogue_manager/`.
+      </Step>
+      
+      <Step title="Enable the plugin">
+        Go to **Project → Project Settings → Plugins** and check the **Enable** box next to Dialogue Manager.
+      </Step>
+    </Steps>
+  </Tab>
+  
+  <Tab title="Manual Installation">
+    <Steps>
+      <Step title="Download from GitHub">
+        Download the latest release from the [GitHub repository](https://github.com/nathanhoad/godot_dialogue_manager/archive/refs/heads/main.zip).
+      </Step>
+      
+      <Step title="Extract the addon folder">
+        Extract the downloaded zip file and copy the `addons/dialogue_manager/` folder to your project's `res://addons/` directory.
+        
+        Your project structure should look like:
+        ```
+        res://
+        ├── addons/
+        │   └── dialogue_manager/
+        │       ├── plugin.cfg
+        │       ├── plugin.gd
+        │       └── ...
+        └── ...
+        ```
+      </Step>
+      
+      <Step title="Enable the plugin">
+        In Godot, go to **Project → Project Settings → Plugins** and check the **Enable** box next to Dialogue Manager.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Verify Installation
+
+Once you've enabled the plugin, you should see:
+
+1. A new **Dialogue** tab in the editor (next to 2D, 3D, Script, AssetLib)
+2. A `DialogueManager` singleton available in your scripts
+3. New node types available when adding nodes: `DialogueLabel` and `DialogueResponsesMenu`
+
+<Tip>
+  Click the **Dialogue** tab to open the dialogue editor. You can create a new dialogue file by clicking the "new dialogue file" button or open an existing one with the "open dialogue" button.
+</Tip>
+
+## What's Included
+
+The addon includes:
+
+- **Dialogue Editor**: A built-in editor for writing dialogue with syntax highlighting
+- **DialogueManager**: A global singleton for managing dialogue resources
+- **Example Balloon**: A pre-built dialogue UI that you can use or customize
+- **DialogueLabel**: A specialized RichTextLabel for typing out dialogue with effects
+- **DialogueResponsesMenu**: A menu component for handling player responses
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Create your first dialogue in under 5 minutes
+  </Card>
+  <Card title="Basic Dialogue" icon="message" href="/basic-dialogue">
+    Learn the dialogue syntax and features
+  </Card>
+</CardGroup>

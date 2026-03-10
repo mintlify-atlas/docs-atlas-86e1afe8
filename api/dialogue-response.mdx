@@ -1,0 +1,317 @@
+---
+title: "DialogueResponse"
+description: "A response option for dialogue lines"
+---
+
+`DialogueResponse` represents a response option attached to a `DialogueLine`. Responses allow players to make choices in dialogue, branching the conversation based on their selection.
+
+## Properties
+
+### id
+
+```gdscript
+var id: String
+```
+
+The unique ID of this response. This is typically the line number from the dialogue file where the response is defined.
+
+### type
+
+```gdscript
+var type: String = DMConstants.TYPE_RESPONSE
+```
+
+The internal type of this dialogue object, always set to `DMConstants.TYPE_RESPONSE`.
+
+### next_id
+
+```gdscript
+var next_id: String = ""
+```
+
+The ID of the next line to jump to if this response is selected by the player. Pass this to `get_next_dialogue_line()` to continue the conversation.
+
+**Example:**
+```gdscript
+# Player chose this response
+var next_line = await DialogueManager.get_next_dialogue_line(dialogue_resource, response.next_id)
+```
+
+### is_allowed
+
+```gdscript
+var is_allowed: bool = true
+```
+
+`true` if the condition of this response was met and the response should be available to the player. Responses with `is_allowed = false` typically should not be displayed or should be shown as disabled/grayed out.
+
+**Example:**
+```gdscript
+for response in line.responses:
+    if response.is_allowed:
+        add_response_button(response.text)
+    else:
+        add_disabled_response_button(response.text)  # Optional: show but disabled
+```
+
+### condition_as_text
+
+```gdscript
+var condition_as_text: String = ""
+```
+
+The original condition text as written in the dialogue file. Useful for debugging or displaying why a response is not allowed.
+
+**Example:**
+```gdscript
+# In dialogue file: - Yes, I'll help [if player_level >= 5]
+# condition_as_text would be: "player_level >= 5"
+```
+
+### character
+
+```gdscript
+var character: String = ""
+```
+
+The character name associated with this response (depending on the "characters in responses" behavior setting in Dialogue Manager settings). Often empty for player responses.
+
+### character_replacements
+
+```gdscript
+var character_replacements: Array[Dictionary] = []
+```
+
+A dictionary of variable replacements for the character name. Generally for internal use only.
+
+### text
+
+```gdscript
+var text: String = ""
+```
+
+The text of the response option. This is what should be displayed to the player as the choice.
+
+**Example:**
+```gdscript
+response_button.text = response.text
+```
+
+### text_replacements
+
+```gdscript
+var text_replacements: Array[Dictionary] = []
+```
+
+A dictionary of variable replacements for the text, used for variable interpolation. Generally for internal use only.
+
+### tags
+
+```gdscript
+var tags: PackedStringArray = []
+```
+
+Any `#tags` that were included on the response line. Tags can be used to add metadata to responses, such as personality traits, skill requirements, or visual styling.
+
+**Example:**
+```gdscript
+# In dialogue: - I'll fight you! #aggressive #requires_courage
+if "aggressive" in response.tags:
+    response_button.add_theme_color_override("font_color", Color.RED)
+```
+
+### translation_key
+
+```gdscript
+var translation_key: String = ""
+```
+
+The key to use for translating the response text. If no explicit ID was specified on the response in the dialogue file, this will be the same as the text.
+
+**Example:**
+```gdscript
+var translated_text = tr(response.translation_key)
+response_button.text = translated_text
+```
+
+## Methods
+
+### get_tag_value
+
+```gdscript
+func get_tag_value(tag_name: String) -> String
+```
+
+Get the value of a tag if the tag is in the form of `tag=value`.
+
+<ParamField name="tag_name" type="String" required>
+  The name of the tag whose value to retrieve
+</ParamField>
+
+<ResponseField name="returns" type="String">
+  The value of the tag, or an empty string if the tag doesn't exist or has no value
+</ResponseField>
+
+**Example:**
+```gdscript
+# In dialogue: - Let me persuade you #skill=charisma #difficulty=hard
+
+var skill = response.get_tag_value("skill")  # Returns "charisma"
+var difficulty = response.get_tag_value("difficulty")  # Returns "hard"
+```
+
+## Usage Examples
+
+### Basic Response Handling
+
+```gdscript
+var line = await DialogueManager.get_next_dialogue_line(dialogue_resource, "conversation_start")
+
+if line.responses.size() > 0:
+    # Clear previous responses
+    clear_response_buttons()
+    
+    # Create button for each allowed response
+    for response in line.responses:
+        if response.is_allowed:
+            var button = create_response_button(response.text)
+            button.pressed.connect(func():
+                on_response_selected(response)
+            )
+```
+
+### Handling Disabled Responses
+
+```gdscript
+for response in line.responses:
+    var button = create_response_button(response.text)
+    
+    if response.is_allowed:
+        button.disabled = false
+        button.pressed.connect(func():
+            on_response_selected(response)
+        )
+    else:
+        button.disabled = true
+        # Optional: show tooltip with condition
+        button.tooltip_text = "Requires: " + response.condition_as_text
+```
+
+### Using Response Tags
+
+```gdscript
+for response in line.responses:
+    if not response.is_allowed:
+        continue
+    
+    var button = create_response_button(response.text)
+    
+    # Style based on tags
+    if "aggressive" in response.tags:
+        button.add_theme_color_override("font_color", Color.RED)
+    elif "peaceful" in response.tags:
+        button.add_theme_color_override("font_color", Color.GREEN)
+    
+    # Check skill requirements
+    if response.has_tag("skill"):
+        var required_skill = response.get_tag_value("skill")
+        add_skill_icon(button, required_skill)
+    
+    button.pressed.connect(func():
+        on_response_selected(response)
+    )
+```
+
+### Complete Response Flow
+
+```gdscript
+func show_dialogue(line: DialogueLine) -> void:
+    # Display the dialogue
+    character_label.text = line.character
+    dialogue_label.text = line.text
+    
+    # Handle responses
+    if line.responses.size() > 0:
+        response_container.show()
+        
+        for response in line.responses:
+            if response.is_allowed:
+                var button = Button.new()
+                button.text = response.text
+                button.pressed.connect(func():
+                    await select_response(response)
+                )
+                response_container.add_child(button)
+    else:
+        response_container.hide()
+
+func select_response(response: DialogueResponse) -> void:
+    # Clear responses
+    for child in response_container.get_children():
+        child.queue_free()
+    
+    # Continue dialogue from response's next_id
+    var next_line = await DialogueManager.get_next_dialogue_line(
+        current_dialogue_resource,
+        response.next_id
+    )
+    
+    if next_line != null:
+        show_dialogue(next_line)
+    else:
+        end_dialogue()
+```
+
+### Response Validation with Feedback
+
+```gdscript
+for response in line.responses:
+    var button = create_response_button(response.text)
+    
+    if response.is_allowed:
+        button.disabled = false
+        button.modulate = Color.WHITE
+        button.pressed.connect(func():
+            select_response(response)
+        )
+    else:
+        # Show but disable responses that don't meet conditions
+        button.disabled = true
+        button.modulate = Color(0.5, 0.5, 0.5, 0.7)
+        
+        # Add tooltip explaining why it's disabled
+        if response.condition_as_text != "":
+            button.tooltip_text = "Requires: " + response.condition_as_text
+    
+    response_container.add_child(button)
+```
+
+### Sorting Responses by Tags
+
+```gdscript
+# Sort responses by priority tag
+var sorted_responses = line.responses.duplicate()
+sorted_responses.sort_custom(func(a, b):
+    var priority_a = int(a.get_tag_value("priority") if a.has_tag("priority") else "0")
+    var priority_b = int(b.get_tag_value("priority") if b.has_tag("priority") else "0")
+    return priority_a > priority_b
+)
+
+for response in sorted_responses:
+    if response.is_allowed:
+        add_response_button(response)
+```
+
+## Notes
+
+<Note>
+Always check `is_allowed` before making a response selectable. Disabled responses can still be displayed to provide feedback to the player about locked options.
+</Note>
+
+<Note>
+The `text` property contains the final processed text with all variable replacements already applied. You don't need to manually resolve variables.
+</Note>
+
+<Note>
+When a response is selected, use its `next_id` property to continue the dialogue with `get_next_dialogue_line()`.
+</Note>

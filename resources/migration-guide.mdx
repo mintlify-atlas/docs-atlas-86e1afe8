@@ -1,0 +1,195 @@
+---
+title: 'Migration Guide'
+description: 'Guide for upgrading between major versions of Dialogue Manager'
+---
+
+This guide helps you migrate your project between different versions of Dialogue Manager for Godot.
+
+## Current Version Requirements
+
+<Note>
+  Dialogue Manager v4 requires **Godot 4.4 or above**. Make sure your project is using a compatible Godot version before upgrading.
+</Note>
+
+## Migrating from v2 to v3
+
+The upgrade from v2 to v3 should be mostly seamless, but there are several important breaking changes to be aware of.
+
+### Breaking Changes
+
+<AccordionGroup>
+  <Accordion title="Include Failed Responses (Now Default Behavior)">
+    **What changed**: The "include failed responses" setting has been removed and is now the default behavior.
+
+    **Impact**: Responses that fail their condition check will be included in the responses list. It's now up to the balloon to filter them out.
+
+    **Migration steps**:
+
+    The provided `DialogueResponsesMenu` node has an option to hide failed responses if you want to maintain the old behavior.
+
+    ```gdscript
+    # In your balloon script
+    $DialogueResponsesMenu.hide_failed_responses = true
+    ```
+
+    Alternatively, filter responses manually:
+
+    ```gdscript
+    func _on_responses_received(responses: Array):
+        var available_responses = responses.filter(func(r): return r.is_allowed)
+        # Display only available responses
+    ```
+  </Accordion>
+
+  <Accordion title="Response Character Lines Removed">
+    **What changed**: The "create lines for responses with characters" setting has been removed.
+
+    **Impact**: You'll need to manually handle displaying character names with response text.
+
+    **Migration steps**:
+
+    ```gdscript
+    # Old behavior was automatic
+    # New approach - handle manually in your balloon
+    func display_response(response: DialogueResponse):
+        if response.character:
+            label.text = "%s: %s" % [response.character, response.text]
+        else:
+            label.text = response.text
+    ```
+  </Accordion>
+
+  <Accordion title="emit Mutation Syntax Changed">
+    **What changed**: The built-in `emit` mutation has been removed in favor of standard GDScript signal syntax.
+
+    **Impact**: Old emit statements will no longer work.
+
+    **Migration steps**:
+
+    ```
+    # Old v2 syntax
+    emit some_signal
+    emit some_signal(arg1, arg2)
+
+    # New v3 syntax (GDScript standard)
+    some_signal.emit()
+    some_signal.emit(arg1, arg2)
+    ```
+
+    Update all your dialogue files to use the new `.emit()` syntax.
+  </Accordion>
+</AccordionGroup>
+
+### Upgrade Process
+
+<Steps>
+  <Step title="Backup Your Project">
+    Create a complete backup of your project before upgrading. Consider using version control (git) for easy rollback.
+  </Step>
+
+  <Step title="Remove Old Version">
+    Delete the `addons/dialogue_manager` directory from your project.
+    
+    ```bash
+    rm -rf addons/dialogue_manager
+    ```
+  </Step>
+
+  <Step title="Install v3">
+    Download Dialogue Manager v3 from either:
+    - [Godot Asset Library](https://godotengine.org/asset-library/asset)
+    - [GitHub Releases](https://github.com/nathanhoad/godot_dialogue_manager/releases)
+
+    Extract it to your `addons/` directory.
+  </Step>
+
+  <Step title="Update Dialogue Files">
+    Search for and update `emit` statements in all `.dialogue` files:
+    
+    - Find: `emit signal_name`
+    - Replace: `signal_name.emit()`
+  </Step>
+
+  <Step title="Update Response Handling">
+    If you were relying on automatic character name display in responses, update your balloon scripts to handle this manually.
+  </Step>
+
+  <Step title="Test Thoroughly">
+    Test all dialogue interactions, responses, and signals to ensure everything works as expected.
+  </Step>
+</Steps>
+
+<Warning>
+  After upgrading, Godot may need to reimport resources. Allow the import process to complete before testing your dialogue.
+</Warning>
+
+## Migrating from v1 to Latest
+
+Dialogue Manager v1 was designed for Godot 3. Migrating to the latest version involves more significant changes.
+
+### Major Differences
+
+- **Engine Version**: v1 was for Godot 3, latest versions require Godot 4.4+
+- **GDScript 2.0**: Syntax changes in GDScript itself
+- **Type System**: Stricter typing in Godot 4
+- **Signal Syntax**: Connect syntax has changed
+
+### Recommended Approach
+
+<Steps>
+  <Step title="Upgrade Godot First">
+    Upgrade your project to Godot 4.4+ using Godot's official migration tools and documentation.
+  </Step>
+
+  <Step title="Fresh Install">
+    Install the latest version of Dialogue Manager from scratch rather than attempting a direct upgrade.
+  </Step>
+
+  <Step title="Recreate Dialogue">
+    Review and test your dialogue files. Most dialogue syntax should work, but check for:
+    - Variable references
+    - Function calls
+    - Signal emissions
+  </Step>
+
+  <Step title="Update Integration Code">
+    Rewrite your dialogue integration code using current Godot 4 and Dialogue Manager APIs.
+
+    ```gdscript
+    # Godot 3 / v1 style
+    DialogueManager.connect("dialogue_ended", self, "_on_dialogue_ended")
+    
+    # Godot 4 / v4 style
+    DialogueManager.dialogue_ended.connect(_on_dialogue_ended)
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  For Godot 3 projects, you can still use [Dialogue Manager v1.x](https://github.com/nathanhoad/godot_dialogue_manager/tree/v1.x). However, new features and fixes are only added to v4.
+</Note>
+
+## Version Compatibility Matrix
+
+| Dialogue Manager Version | Godot Version | Status |
+|--------------------------|---------------|---------|
+| v4.x (current) | 4.4+ | Active development |
+| v3.3 | 4.3 | Maintenance only |
+| v2.x | ≤4.3 | Legacy |
+| v1.x | 3.x | Legacy |
+
+## Getting Help
+
+If you encounter issues during migration:
+
+- Check the [FAQ](/resources/faq) for common problems
+- [Open a discussion on GitHub](https://github.com/nathanhoad/godot_dialogue_manager/discussions)
+- [Ask on Discord](https://nathanhoad.net/discord)
+
+## Older Versions
+
+If you need to stay on an older version of Godot:
+
+- [Dialogue Manager v3.3](https://github.com/nathanhoad/godot_dialogue_manager/releases/tag/v3.3.3) for Godot 4.3
+- [Dialogue Manager v2.x](https://github.com/nathanhoad/godot_dialogue_manager/tree/v2.x) for Godot ≤4.3
+- [Dialogue Manager v1.x](https://github.com/nathanhoad/godot_dialogue_manager/tree/v1.x) for Godot 3

@@ -1,0 +1,385 @@
+---
+title: Concurrent Lines
+description: Create simultaneous dialogue with multiple characters speaking at once
+---
+
+## Overview
+
+Concurrent lines allow multiple characters to speak simultaneously, creating overlapping dialogue. This is useful for:
+- Group conversations
+- Characters interrupting each other
+- Background chatter
+- Simultaneous reactions
+
+<Note>
+The built-in example balloon does not contain an implementation for concurrent lines. You'll need to implement custom handling in your dialogue balloon.
+</Note>
+
+## Basic Syntax
+
+After a regular line of dialogue, any lines that should be spoken at the same time are prefixed with `| `:
+
+```
+Nathan: This is a regular line of dialogue.
+| Coco: And I'll say this line at the same time!
+| Lilly: And I'll say this too!
+```
+
+The first line (Nathan's) is the primary line, and the lines prefixed with `|` are concurrent lines.
+
+## How It Works
+
+<Steps>
+
+<Step title="Primary line">
+The first line is the "main" line returned by the dialogue system.
+</Step>
+
+<Step title="Concurrent lines">
+Lines prefixed with `|` are collected into the `concurrent_lines` array.
+</Step>
+
+<Step title="Custom implementation">
+Your dialogue balloon accesses `line.concurrent_lines` to display them simultaneously.
+</Step>
+
+</Steps>
+
+## Accessing Concurrent Lines
+
+In your dialogue balloon code:
+
+```gdscript
+func _on_dialogue_line(line: DialogueLine) -> void:
+	# Display the main line
+	main_label.text = line.text
+	if line.character:
+		main_character.text = line.character
+	
+	# Check for concurrent lines
+	if line.concurrent_lines.size() > 0:
+		for concurrent in line.concurrent_lines:
+			# Display each concurrent line
+			var bubble = create_dialogue_bubble()
+			bubble.text = concurrent.text
+			bubble.character = concurrent.character
+			show_concurrent_bubble(bubble)
+```
+
+## Examples
+
+### Simple Conversation
+
+```
+~ start
+Nathan: What a beautiful day!
+| Coco: I agree!
+| Lilly: The weather is perfect!
+
+Nathan: Should we go on an adventure?
+| Coco: Yes!
+| Lilly: Absolutely!
+
+Nathan: Then let's go!
+=> END
+```
+
+This creates three moments where multiple characters speak simultaneously.
+
+### Mixed Dialogue
+
+You can mix regular and concurrent lines:
+
+```
+~ party_scene
+Nathan: Welcome everyone!
+Coco: Thanks for having us!
+
+Nathan: Let's have some fun!
+| Coco: I'm excited!
+| Lilly: This will be great!
+| Bob: Can't wait!
+
+Nathan: Alright, let's start the party!
+=> END
+```
+
+### Reactions
+
+Concurrent lines work well for simultaneous reactions:
+
+```
+~ revelation
+Nathan: The treasure is fake!
+| Coco: What?!
+| Lilly: No way!
+| Bob: I can't believe it!
+
+Nathan: Someone beat us to it.
+=> END
+```
+
+### With Variables and Tags
+
+Concurrent lines support all regular dialogue features:
+
+```
+~ greeting
+Nathan: [#anim=wave] Hello, {{player_name}}!
+| Coco: [#anim=wave, #emotion=happy] Welcome!
+| Lilly: [#anim=smile] Good to see you!
+
+Nathan: We've been expecting you.
+=> END
+```
+
+## Implementation Example
+
+Here's a basic example of implementing concurrent lines in a custom balloon:
+
+```gdscript
+extends CanvasLayer
+
+@onready var main_dialogue_box = $MainDialogueBox
+@onready var main_label = $MainDialogueBox/Label
+@onready var main_character = $MainDialogueBox/Character
+@onready var concurrent_container = $ConcurrentContainer
+
+const ConcurrentBubble = preload("res://concurrent_bubble.tscn")
+
+func _on_dialogue_line(line: DialogueLine) -> void:
+	# Clear previous concurrent lines
+	for child in concurrent_container.get_children():
+		child.queue_free()
+	
+	# Display main line
+	main_label.text = line.text
+	main_character.text = line.character if line.character else ""
+	main_dialogue_box.show()
+	
+	# Display concurrent lines
+	if line.concurrent_lines.size() > 0:
+		for i in line.concurrent_lines.size():
+			var concurrent = line.concurrent_lines[i]
+			var bubble = ConcurrentBubble.instantiate()
+			
+			bubble.text = concurrent.text
+			bubble.character = concurrent.character
+			
+			# Position bubbles
+			bubble.position.x = 100 + (i * 200)
+			bubble.position.y = 50
+			
+			concurrent_container.add_child(bubble)
+			
+			# Apply tags if present
+			if "happy" in concurrent.tags:
+				bubble.apply_emotion("happy")
+			
+			# Start animation
+			bubble.appear()
+```
+
+## Advanced Usage
+
+### With Conditions
+
+Concurrent lines can have conditions:
+
+```
+Nathan: The monster is here!
+| Coco: [if has_weapon] I'll fight!
+| Coco: [if not has_weapon] I'm scared!
+| Lilly: [if is_healer] I'll support you!
+| Lilly: [if not is_healer] What do we do?!
+```
+
+### Nested in Branches
+
+Concurrent lines work within branching dialogue:
+
+```
+~ encounter
+Nathan: Should we run or fight?
+- Let's fight!
+	Nathan: Then let's do this!
+	| Coco: I'm ready!
+	| Lilly: Let's go!
+	=> fight
+- Let's run!
+	Nathan: Retreat!
+	| Coco: Run!
+	| Lilly: Get away!
+	=> flee
+```
+
+### With Random Lines
+
+Combine concurrent lines with randomization:
+
+```
+~ surprise
+Nathan: Look at that!
+| % Coco: Wow!
+| % Coco: Amazing!
+| % Coco: Incredible!
+| % Lilly: So cool!
+| % Lilly: Fascinating!
+| % Lilly: Remarkable!
+```
+
+## Timing Considerations
+
+When implementing concurrent lines, consider:
+
+<Accordion title="Duration">
+
+How long should concurrent lines be displayed?
+
+```gdscript
+# Option 1: Display until longest line finishes
+var max_duration = 0
+for concurrent in line.concurrent_lines:
+	var duration = calculate_duration(concurrent.text)
+	max_duration = max(max_duration, duration)
+
+await get_tree().create_timer(max_duration).timeout
+
+# Option 2: Display for fixed duration
+await get_tree().create_timer(2.0).timeout
+
+# Option 3: Wait for player input
+await input_received
+```
+
+</Accordion>
+
+<Accordion title="Positioning">
+
+How should concurrent bubbles be arranged?
+
+```gdscript
+# Horizontal layout
+bubble.position.x = base_x + (index * spacing)
+
+# Vertical layout
+bubble.position.y = base_y + (index * spacing)
+
+# Grid layout
+var row = index / columns
+var col = index % columns
+bubble.position = Vector2(col * spacing_x, row * spacing_y)
+
+# Character-based positioning
+var char_pos = get_character_position(concurrent.character)
+bubble.position = char_pos + bubble_offset
+```
+
+</Accordion>
+
+<Accordion title="Animation">
+
+How should concurrent lines appear and disappear?
+
+```gdscript
+# Staggered appearance
+for i in line.concurrent_lines.size():
+	var bubble = bubbles[i]
+	bubble.appear()
+	await get_tree().create_timer(0.1).timeout  # Small delay between each
+
+# Simultaneous appearance
+for bubble in bubbles:
+	bubble.appear()
+
+# Wave pattern
+for i in bubbles.size():
+	var delay = sin(i * 0.5) * 0.2
+	get_tree().create_timer(delay).timeout.connect(bubbles[i].appear)
+```
+
+</Accordion>
+
+<Accordion title="Audio">
+
+How should voice lines be handled?
+
+```gdscript
+# Play all simultaneously
+for concurrent in line.concurrent_lines:
+	var audio = AudioStreamPlayer.new()
+	audio.stream = get_voice_line(concurrent)
+	audio.play()
+
+# Play with slight delays for clarity
+for i in line.concurrent_lines.size():
+	var concurrent = line.concurrent_lines[i]
+	get_tree().create_timer(i * 0.1).timeout.connect(
+		func(): play_voice(concurrent)
+	)
+```
+
+</Accordion>
+
+## Complete Example
+
+Here's a complete scene using concurrent dialogue:
+
+```
+~ tavern_scene
+Nathan: [#anim=enter] Welcome to the Rusty Sword Tavern!
+
+Nathan: What brings you all here?
+
+- We're looking for adventure
+	Nathan: Excellent! I have just the quest for you.
+	| Coco: [#emotion=excited] What is it?
+	| Lilly: [#emotion=curious] Tell us more!
+	| Bob: [#emotion=eager] We're ready!
+	
+	Nathan: There's a dragon terrorizing the nearby village.
+	| Coco: [#emotion=determined] Let's slay it!
+	| Lilly: [#emotion=worried] A dragon? That sounds dangerous...
+	| Bob: [#emotion=brave] We can handle it!
+	
+	Nathan: Then it's settled. Good luck!
+	| Coco: [#anim=fist_pump] Let's go!
+	| Lilly: [#anim=nod] We'll do our best.
+	| Bob: [#anim=thumbs_up] See you soon!
+	=> quest_accepted
+
+- Just having drinks
+	Nathan: Well then, enjoy yourselves!
+	| Coco: [#anim=raise_glass] Cheers!
+	| Lilly: [#anim=raise_glass] To friendship!
+	| Bob: [#anim=raise_glass] To adventure!
+	=> END
+
+~ quest_accepted
+Nathan: May fortune favor you.
+=> END
+```
+
+## Tips for Concurrent Lines
+
+<Warning>
+**Keep concurrent lines short!** Long concurrent lines are hard to read when displayed simultaneously. Aim for 5-10 words maximum per concurrent line.
+</Warning>
+
+<Note>
+**Consider accessibility:** Provide options to display concurrent lines sequentially for players who find simultaneous text difficult to read.
+</Note>
+
+### Best Practices
+
+1. **Limit the number**: Avoid more than 3-4 concurrent lines at once
+2. **Visual distinction**: Use different colors, positions, or sizes for each character
+3. **Clear attribution**: Always include character names for concurrent lines
+4. **Context awareness**: Ensure concurrent lines make sense together
+5. **Test readability**: Verify that all lines are readable in your UI
+
+## Next Steps
+
+- Learn about [variables and tags](/writing/variables-and-tags) to enhance concurrent lines
+- Use [responses and branching](/writing/responses-and-branching) with concurrent dialogue
+- Explore the [API reference](/api/dialogue-line) for `DialogueLine` properties

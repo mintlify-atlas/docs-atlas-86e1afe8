@@ -1,0 +1,129 @@
+---
+title: "Introduction"
+description: "A powerful nonlinear dialogue system for Godot with a built-in editor and runtime"
+---
+
+<img
+  className="block"
+  src="https://media.brand.dev/ca52e675-30e4-47a2-b056-517c5f0c6d48.svg"
+  alt="Dialogue Manager Logo"
+  width="200"
+/>
+
+## Welcome to Dialogue Manager
+
+Dialogue Manager is a powerful addon for Godot 4.4+ that provides a stateless branching dialogue editor and runtime. Write your dialogue in a script-like way and easily integrate it into your game.
+
+<CardGroup cols={2}>
+  <Card title="Quick Installation" icon="download" href="/installation">
+    Install via Godot Asset Library or download from GitHub
+  </Card>
+  <Card title="Get Started" icon="rocket" href="/quickstart">
+    Create your first dialogue in minutes
+  </Card>
+  <Card title="Write Dialogue" icon="pen" href="/writing/basic-dialogue">
+    Learn the dialogue syntax and features
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/dialogue-manager">
+    Explore the complete API documentation
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Nonlinear Branching" icon="code-branch">
+    Create complex dialogue trees with conditions, responses, and dynamic branching
+  </Card>
+  <Card title="Integrated Editor" icon="pen-to-square">
+    Built-in dialogue editor with syntax highlighting and real-time validation
+  </Card>
+  <Card title="Stateless Runtime" icon="memory">
+    No state persistence required - dialogue flows are evaluated on-the-fly
+  </Card>
+  <Card title="BBCode Support" icon="bold">
+    Rich text formatting with Godot's BBCode and custom extensions
+  </Card>
+  <Card title="C# Support" icon="hashtag">
+    Full C# wrapper for seamless integration in C# projects
+  </Card>
+  <Card title="Translation Ready" icon="language">
+    Built-in support for game translations and localization
+  </Card>
+  <Card title="Custom Balloons" icon="comment">
+    Flexible dialogue balloon system - use the example or build your own
+  </Card>
+  <Card title="Random Lines" icon="shuffle">
+    Weighted random line selection for dynamic conversations
+  </Card>
+</CardGroup>
+
+## Why Dialogue Manager?
+
+<AccordionGroup>
+  <Accordion title="Easy to Learn">
+    The dialogue syntax is intuitive and script-like, making it easy for writers and developers to collaborate. No complex node graphs - just write dialogue naturally.
+  </Accordion>
+  
+  <Accordion title="Powerful and Flexible">
+    Support for conditions, mutations, variables, tags, concurrent lines, and more. Handle everything from simple conversations to complex narrative systems.
+  </Accordion>
+  
+  <Accordion title="Production Ready">
+    Used in real games with over 3,300+ stars on GitHub. Battle-tested with extensive documentation and example projects.
+  </Accordion>
+  
+  <Accordion title="Open Source">
+    MIT licensed and actively maintained. Join a thriving community of game developers using Dialogue Manager.
+  </Accordion>
+</AccordionGroup>
+
+## Example Dialogue
+
+Here's a simple example of what dialogue looks like:
+
+```gdscript Example dialogue
+~ start
+
+Nathan: Hi! I'm Nathan.
+Nathan: How many projects have you started and not finished?
+
+- Just a couple
+	Nathan: That's not so bad.
+	=> END
+	
+- A lot
+	Nathan: Maybe you should finish one before starting another one.
+	=> END
+	
+- I always finish my projects [if PlayerStats.projects_completed > 5]
+	Nathan: That's great!
+	=> END
+```
+
+<Note>
+  Dialogue Manager supports GDScript and C#, with full type safety and IDE integration.
+</Note>
+
+## Community and Support
+
+<CardGroup cols={2}>
+  <Card title="Discord Community" icon="discord" href="https://discord.gg/zwBVQdJchX">
+    Join the community for help and discussions
+  </Card>
+  <Card title="GitHub Repository" icon="github" href="https://github.com/nathanhoad/godot_dialogue_manager">
+    View source code, report issues, and contribute
+  </Card>
+  <Card title="Example Projects" icon="folder-open" href="/resources/examples">
+    Download example projects to learn best practices
+  </Card>
+  <Card title="FAQ" icon="question" href="/resources/faq">
+    Find answers to common questions
+  </Card>
+</CardGroup>
+
+## Ready to Get Started?
+
+<Card title="Installation Guide" icon="rocket" href="/installation" horizontal>
+  Follow our installation guide to add Dialogue Manager to your Godot project
+</Card>

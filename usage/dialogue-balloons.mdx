@@ -1,0 +1,97 @@
+---
+title: Dialogue Balloons
+description: Learn how to use and configure dialogue balloons in Dialogue Manager
+---
+
+Dialogue balloons are the UI elements that display dialogue to players. Dialogue Manager includes an example balloon to help you get started.
+
+## Using the Example Balloon
+
+The simplest way to show dialogue is using `show_dialogue_balloon()`:
+
+```gdscript
+DialogueManager.show_dialogue_balloon(resource, label)
+```
+
+<ParamField path="resource" type="DialogueResource" required>
+  The dialogue resource (*.dialogue file) to display
+</ParamField>
+
+<ParamField path="label" type="String" default="0">
+  The starting label to begin dialogue from
+</ParamField>
+
+### Example Usage
+
+```gdscript
+# Load and show dialogue
+var dialogue_resource = load("res://dialogue/intro.dialogue")
+DialogueManager.show_dialogue_balloon(dialogue_resource, "start")
+```
+
+This will show the example balloon by default, but you can configure it in [Settings](/advanced/settings) to use your custom balloon.
+
+## Configuration Options
+
+You can configure the default balloon scene in your project settings:
+
+<Steps>
+  <Step title="Open Project Settings">
+    Navigate to **Project > Project Settings** in Godot
+  </Step>
+  
+  <Step title="Find Dialogue Manager Settings">
+    Scroll to the **Dialogue Manager** section
+  </Step>
+  
+  <Step title="Set Custom Balloon">
+    Set the **Balloon Scene** path to your custom balloon scene
+  </Step>
+</Steps>
+
+## Using Multiple Balloons
+
+If you have multiple balloon styles in your game, you can specify which one to use:
+
+```gdscript
+# Use a specific balloon scene
+DialogueManager.show_dialogue_balloon_scene(
+    "res://balloons/narrator_balloon.tscn",
+    dialogue_resource,
+    "start"
+)
+```
+
+## Adding Balloons to Scenes
+
+You can also add a balloon directly to your scene:
+
+<Steps>
+  <Step title="Add Balloon Node">
+    Add your balloon scene as a node in your game scene
+  </Step>
+  
+  <Step title="Configure in Inspector">
+    - Set the **Dialogue Resource** property
+    - Set the **Start From Label** property
+    - Optionally enable **Auto Start**
+  </Step>
+  
+  <Step title="Start Manually (Optional)">
+    If not using auto start, call `start()` on the balloon node:
+    
+    ```gdscript
+    $Balloon.start()
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  The example balloon blocks other input while dialogue is active. You can customize this behavior in your own balloon implementation.
+</Note>
+
+## Next Steps
+
+- Learn how to [create custom balloons](/usage/custom-balloons)
+- Understand [dialogue integration](/usage/integrating-dialogue) patterns
+- Explore the [DialogueLabel](/usage/dialogue-label) node for text rendering

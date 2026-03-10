@@ -1,0 +1,359 @@
+---
+title: Dialogue Label
+description: Use the DialogueLabel node for typewriter effects and dialogue rendering
+---
+
+## Overview
+
+The `DialogueLabel` node is a specialized `RichTextLabel` designed for rendering dialogue with typewriter effects. It automatically handles BBCode, wait times, speed changes, and inline mutations.
+
+## Adding DialogueLabel to Your Scene
+
+<Steps>
+
+<Step title="Add the node">
+Add a `DialogueLabel` node to your scene (it appears in the node list after installing Dialogue Manager).
+</Step>
+
+<Step title="Configure the label">
+Set properties like `seconds_per_step`, `pause_at_characters`, and `skip_action` in the Inspector.
+</Step>
+
+<Step title="Assign a dialogue line">
+```gdscript
+@onready var dialogue_label: DialogueLabel = %DialogueLabel
+
+func show_line(line: DialogueLine):
+	dialogue_label.dialogue_line = line
+	dialogue_label.type_out()
+```
+</Step>
+
+</Steps>
+
+## Basic Usage
+
+### Typing Out Dialogue
+
+Use the `type_out()` method to start the typewriter effect:
+
+```gdscript
+dialogue_label.dialogue_line = dialogue_line
+dialogue_label.type_out()
+await dialogue_label.finished_typing
+print("Typing complete!")
+```
+
+### Skipping Typing
+
+Allow players to skip the typewriter effect:
+
+```gdscript
+func _input(event):
+	if event.is_action_pressed("ui_cancel") and dialogue_label.is_typing:
+		dialogue_label.skip_typing()
+```
+
+## Properties
+
+### Timing Properties
+
+<ParamField path="seconds_per_step" type="float" default="0.02">
+  The speed at which text types out. Lower values = faster typing.
+</ParamField>
+
+<ParamField path="pause_at_characters" type="String" default=".?!">
+  Characters that trigger an automatic pause during typing.
+</ParamField>
+
+<ParamField path="seconds_per_pause_step" type="float" default="0.3">
+  Duration of the automatic pause when encountering pause characters.
+</ParamField>
+
+### Skip Configuration
+
+<ParamField path="skip_action" type="StringName" default="ui_cancel">
+  The input action used to skip typing.
+</ParamField>
+
+<ParamField path="skip_pause_at_character_if_followed_by" type="String" default=')&quot;'>
+  Don't pause if a pause character is followed by these characters.
+</ParamField>
+
+<ParamField path="skip_pause_at_abbreviations" type="PackedStringArray" default='["Mr", "Mrs", "Ms", "Dr", "etc", "eg", "ex"]'>
+  Common abbreviations that shouldn't trigger pauses (only applies if "." is in `pause_at_characters`).
+</ParamField>
+
+## State Properties
+
+<ParamField path="dialogue_line" type="DialogueLine">
+  The current line of dialogue being displayed. Setting this updates the label's text.
+</ParamField>
+
+<ParamField path="is_typing" type="bool" readonly>
+  Whether the label is currently typing. Returns `false` during inline mutations.
+</ParamField>
+
+## Signals
+
+### spoke
+
+Emitted for each letter typed:
+
+```gdscript
+dialogue_label.spoke.connect(_on_spoke)
+
+func _on_spoke(letter: String, letter_index: int, speed: float):
+	# Play a sound effect for each letter
+	audio_player.pitch_scale = randf_range(0.9, 1.1)
+	audio_player.play()
+```
+
+**Parameters:**
+- `letter` - The character that was just typed
+- `letter_index` - The index of the character in the text
+- `speed` - The current typing speed
+
+### started_typing
+
+Emitted when typing begins:
+
+```gdscript
+dialogue_label.started_typing.connect(_on_started_typing)
+
+func _on_started_typing():
+	print("Started typing dialogue")
+	skip_button.show()
+```
+
+### finished_typing
+
+Emitted when typing completes:
+
+```gdscript
+dialogue_label.finished_typing.connect(_on_finished_typing)
+
+func _on_finished_typing():
+	print("Finished typing dialogue")
+	continue_indicator.show()
+```
+
+### skipped_typing
+
+Emitted when the player skips typing:
+
+```gdscript
+dialogue_label.skipped_typing.connect(_on_skipped_typing)
+
+func _on_skipped_typing():
+	print("Player skipped typing")
+```
+
+## Advanced Usage
+
+### Custom Typing Speeds
+
+Dialogue Manager supports dynamic speed changes in your dialogue:
+
+```
+Nathan: This is normal speed. [speed=2]This is faster![/speed] [speed=0.5]This is slower.[/speed]
+```
+
+The DialogueLabel automatically handles these speed changes. You can access the current speed in the `spoke` signal.
+
+### Automatic Pauses
+
+The label automatically pauses briefly when encountering punctuation:
+
+```gdscript
+# Default pause characters
+dialogue_label.pause_at_characters = ".?!"
+
+# Customize pause duration
+dialogue_label.seconds_per_pause_step = 0.5  # Longer pause
+```
+
+To disable automatic pauses:
+
+```gdscript
+dialogue_label.pause_at_characters = ""
+```
+
+### Manual Wait Times
+
+Your dialogue can include wait commands:
+
+```
+Nathan: This has a pause.[wait=1.5] Did you notice?
+```
+
+The DialogueLabel handles these waits automatically during typing.
+
+### Inline Mutations
+
+DialogueLabel processes inline mutations (code that runs at specific positions during typing):
+
+```
+Nathan: I'm updating a variable. {{some_variable = 10}} Done!
+```
+
+The typing pauses briefly while the mutation executes, then continues.
+
+## Integration with Custom Balloons
+
+### Basic Integration
+
+```gdscript
+extends CanvasLayer
+
+@onready var dialogue_label: DialogueLabel = %DialogueLabel
+@onready var character_label: Label = %CharacterLabel
+
+var dialogue_line: DialogueLine:
+	set(value):
+		if value:
+			dialogue_line = value
+			show_line()
+
+func show_line():
+	# Update character name
+	character_label.text = dialogue_line.character
+	
+	# Type out the dialogue
+	dialogue_label.dialogue_line = dialogue_line
+	dialogue_label.type_out()
+	await dialogue_label.finished_typing
+	
+	# Show continue indicator
+	if dialogue_line.responses.size() == 0:
+		continue_indicator.show()
+```
+
+### Handling User Input
+
+```gdscript
+func _input(event):
+	if dialogue_label.is_typing:
+		# Skip typing on input
+		if event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_cancel"):
+			dialogue_label.skip_typing()
+			get_viewport().set_input_as_handled()
+	else:
+		# Advance dialogue on input
+		if event.is_action_pressed("ui_accept"):
+			advance_dialogue()
+			get_viewport().set_input_as_handled()
+```
+
+### Visual Feedback During Typing
+
+```gdscript
+@onready var cursor: AnimatedSprite2D = %Cursor
+
+func _ready():
+	dialogue_label.started_typing.connect(_on_started_typing)
+	dialogue_label.finished_typing.connect(_on_finished_typing)
+
+func _on_started_typing():
+	cursor.hide()
+	continue_button.disabled = true
+
+func _on_finished_typing():
+	cursor.show()
+	cursor.play("blink")
+	continue_button.disabled = false
+```
+
+## Custom DialogueLabel Subclass
+
+You can extend DialogueLabel for custom behavior:
+
+```gdscript
+extends DialogueLabel
+
+## Override to customize how text is set
+func _update_text() -> void:
+	# Add custom formatting
+	text = "[color=yellow]%s:[/color] %s" % [dialogue_line.character, dialogue_line.text]
+```
+
+## Performance Tips
+
+<Note>
+**Instant Text Display**: Set `seconds_per_step = 0` to display text instantly without typing effects.
+</Note>
+
+```gdscript
+# For accessibility or speed-reading
+if settings.instant_text:
+	dialogue_label.seconds_per_step = 0
+else:
+	dialogue_label.seconds_per_step = 0.02
+```
+
+## Example: Complete Balloon Implementation
+
+```gdscript
+extends CanvasLayer
+
+@onready var dialogue_label: DialogueLabel = %DialogueLabel
+@onready var character_label: RichTextLabel = %CharacterLabel
+@onready var continue_indicator: Control = %ContinueIndicator
+
+var dialogue_resource: DialogueResource
+var current_line: DialogueLine
+
+func start(resource: DialogueResource, label: String = ""):
+	dialogue_resource = resource
+	current_line = await dialogue_resource.get_next_dialogue_line(label)
+	show_line()
+
+func show_line():
+	if current_line == null:
+		queue_free()
+		return
+	
+	# Update UI
+	character_label.text = current_line.character
+	character_label.visible = not current_line.character.is_empty()
+	continue_indicator.hide()
+	
+	# Type out dialogue
+	dialogue_label.dialogue_line = current_line
+	dialogue_label.type_out()
+	await dialogue_label.finished_typing
+	
+	# Handle responses or continue
+	if current_line.responses.size() > 0:
+		show_responses(current_line.responses)
+	else:
+		continue_indicator.show()
+
+func _input(event):
+	if not is_visible_in_tree():
+		return
+	
+	if dialogue_label.is_typing:
+		if event.is_action_pressed("ui_cancel"):
+			dialogue_label.skip_typing()
+			get_viewport().set_input_as_handled()
+	elif current_line and current_line.responses.size() == 0:
+		if event.is_action_pressed("ui_accept"):
+			advance_dialogue()
+			get_viewport().set_input_as_handled()
+
+func advance_dialogue():
+	current_line = await dialogue_resource.get_next_dialogue_line(current_line.next_id)
+	show_line()
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Custom Balloons" icon="message" href="/usage/custom-balloons">
+    Build custom dialogue UI with DialogueLabel
+  </Card>
+  <Card title="Integrating Dialogue" icon="code" href="/usage/integrating-dialogue">
+    Learn about DialogueLine and game integration
+  </Card>
+</CardGroup>

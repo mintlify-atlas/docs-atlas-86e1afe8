@@ -1,0 +1,348 @@
+---
+title: Conditions and Mutations
+description: Control dialogue flow with conditionals and modify game state with mutations
+---
+
+## Conditions
+
+Conditions allow you to branch your dialogue based on game state or variables.
+
+### If/Elif/Else Blocks
+
+Start a condition line with `if` followed by an expression:
+
+```
+if SomeGlobal.some_property >= 10
+	Nathan: That property is greater than or equal to 10
+elif SomeGlobal.some_other_property == "some value"
+	Nathan: Or we might be in here.
+else
+	Nathan: If neither are true, I'll say this.
+```
+
+The indented content under each condition will only execute if that condition is true.
+
+### Complex Conditions
+
+Conditions can be joined with `and`/`or` and grouped with parentheses:
+
+```
+if something == "a value" and (score < 0 or score > 100)
+	Nathan: That condition was true!
+```
+
+### Inline Conditions
+
+Conditions can be used inline within dialogue text:
+
+```
+Nathan: I have done this [if already_done]once again[/if]
+```
+
+For simple this-or-that conditions:
+
+```
+Nathan: You have {{num_apples}} [if num_apples == 1]apple[else]apples[/if], nice!
+```
+
+<Accordion title="Escaping condition keywords">
+
+To start a dialogue line with "if", "elif", or "else" without it being treated as a condition, prefix it with a backslash:
+
+```
+\if you want to say this literally
+Nathan: The line above starts with "if".
+```
+
+</Accordion>
+
+### Response Conditions
+
+Responses can have conditions to control when they appear:
+
+```
+Nathan: What would you like?
+- This one [if SomeGlobal.some_property == 0 or SomeGlobal.some_other_property == false /]
+	Nathan: Ah, so you want this one?
+- Another one [if SomeGlobal.some_method() /] => another_label
+- Nothing => END
+```
+
+<Warning>
+If using both a condition and a goto on a response line, the goto must come **last**.
+</Warning>
+
+### Random Line Conditions
+
+Randomized lines can also have conditions:
+
+```
+% => some_label
+%2 => some_other_label
+% [if SomeGlobal.some_condition] => another_label
+```
+
+The conditional random line will only be included in the random pool if the condition is true.
+
+## Match Statements
+
+To shortcut long if/elif chains, use a `match` statement:
+
+```
+match SomeGlobal.some_property
+	when 1
+		Nathan: It is 1.
+	when > 5
+		Nathan: It is greater than 5 (but not 1).
+	else
+		Nathan: It was something else.
+```
+
+Match statements support:
+- Exact value matching: `when 1`
+- Comparison operators: `when > 5`, `when <= 10`
+- Multiple values: `when 1, 2, 3`
+- Fallback: `else`
+
+## While Loops
+
+Use `while` to create loops that repeat as long as a condition is true:
+
+```
+while SomeGlobal.some_property < 10
+	Nathan: The property is still less than 10 - specifically, it is {{SomeGlobal.some_property}}.
+	do SomeGlobal.some_property += 1
+Nathan: Now, we can move on.
+```
+
+<Warning>
+Be careful with while loops! Ensure the condition will eventually become false, or you'll create an infinite loop.
+</Warning>
+
+## Mutations
+
+Mutations allow you to modify game state from within dialogue.
+
+### Set Statement
+
+Use `set` to assign values to variables:
+
+```
+if SomeGlobal.has_met_nathan == false
+	Nathan: Hi, I'm Nathan.
+	set SomeGlobal.has_met_nathan = true
+Nathan: What can I do for you?
+```
+
+### Do Statement
+
+Use `do` to call functions:
+
+```
+if SomeGlobal.has_met_nathan == false
+	do SomeGlobal.animate("Nathan", "Wave")
+	Nathan: Hi, I'm Nathan.
+	set SomeGlobal.has_met_nathan = true
+Nathan: What can I do for you?
+```
+
+The Dialogue Manager will call the `animate` method on the `SomeGlobal` object with the specified arguments.
+
+### Inline Mutations
+
+Mutations can be used inline within dialogue text:
+
+```
+Nathan: I'm not sure we've met before [do wave()]I'm Nathan.
+Nathan: I can also emit signals[do SomeGlobal.some_signal.emit()] inline.
+```
+
+Inline mutations are called as the typed dialogue reaches that point in the text.
+
+<Accordion title="Async mutations">
+
+Inline mutations that use `await` will pause dialogue typing until they resolve:
+
+```
+Nathan: Watch this [do some_async_function()]magic!
+```
+
+To ignore awaiting and continue typing immediately, add a `!` after `do`:
+
+```
+Nathan: Watch this [do! some_async_function()]magic!
+```
+
+</Accordion>
+
+## Emitting Signals
+
+Signals can be emitted like in GDScript by calling `emit` on them:
+
+```
+do SomeGlobal.some_signal.emit("some argument")
+do SomeGlobal.multi_param_signal.emit(123, "text", true)
+```
+
+## Null Coalescing
+
+Use the `?.` operator to safely access properties that may be null:
+
+```
+if some_node_reference?.name == "SomeNode"
+	Nathan: Notice the "?." syntax?
+```
+
+If `some_node_reference` is null, the expression evaluates to null instead of crashing.
+
+```
+Nathan: The player's name is {{player_reference?.name ?? "Unknown"}}.
+```
+
+## Extra Game States
+
+You can pass additional objects when starting dialogue:
+
+```gdscript
+func pirate():
+	print("yarrr")
+
+class GameStateClass:
+	var pirate_name = "phil"
+	func hello():
+		print("ahoy")
+
+func _ready() -> void:
+	DialogueManager.show_example_dialogue_balloon(
+		load("res://main.dialogue"),
+		"start",
+		[self, { "game" = GameStateClass.new() }]
+	)
+```
+
+In dialogue, you can access these directly:
+
+```
+~ start
+do game.hello()
+do pirate()
+set game.pirate_name = "delilah"
+do debug(game.pirate_name)
+=> END
+```
+
+<Note>
+Extra game states provide references to objects that exist outside the dialogue system. Changes to their properties **persist** after the conversation ends, unlike `locals` which are temporary.
+</Note>
+
+## State Shortcuts
+
+To shorten references from `SomeGlobal.some_property` to just `some_property`:
+
+<Steps>
+
+<Step title="Global shortcuts">
+Set up global state shortcuts in Settings for use across all dialogue.
+</Step>
+
+<Step title="Per-file shortcuts">
+Add `using SomeGlobal` at the top of your dialogue file:
+
+```
+using SomeGlobal
+
+~ start
+if some_property > 10
+	Nathan: No need for the SomeGlobal prefix!
+```
+</Step>
+
+</Steps>
+
+## Special Built-in Functions
+
+Dialogue Manager provides several built-in functions:
+
+<Accordion title="wait(seconds)">
+
+Wait for a specified number of seconds:
+
+```
+Nathan: Watch this...
+do wait(2)
+Nathan: Magic!
+```
+
+**Note:** This has no effect when used inline.
+
+</Accordion>
+
+<Accordion title="debug(...)">
+
+Print values to Godot's Output window:
+
+```
+do debug("Current health:", player_health)
+do debug("Inventory:", player_inventory)
+```
+
+Useful for debugging your dialogue logic.
+
+</Accordion>
+
+<Accordion title="self">
+
+Refers to the current `DialogueResource`:
+
+```
+do debug("Current dialogue file:", self)
+if self.resource_path.contains("chapter1")
+	Nathan: We're in chapter 1!
+```
+
+</Accordion>
+
+## Complete Example
+
+Here's a complete example combining conditions and mutations:
+
+```
+using GameState
+
+~ start
+if player_health <= 0
+	Nathan: You don't look so good...
+	=> game_over
+elif player_health < 50
+	Nathan: You should heal up!
+	do show_health_warning()
+else
+	Nathan: You're looking healthy!
+
+Nathan: What would you like to do?
+- Buy health potion [if gold >= 50 and player_health < 100]
+	set gold -= 50
+	set player_health = 100
+	do play_sound("heal")
+	Nathan: There you go, good as new!
+	=> start
+- Buy weapon [if gold >= 100 and not has_weapon]
+	set gold -= 100
+	set has_weapon = true
+	Nathan: A fine weapon!
+	=> start
+- Leave
+	Nathan: Safe travels!
+	=> END
+
+~ game_over
+Nathan: This is the end for you...
+do trigger_game_over()
+=> END!
+```
+
+## Next Steps
+
+- Learn about [labels and jumps](/writing/labels-and-jumps) for complex dialogue flow
+- Explore [variables and tags](/writing/variables-and-tags) for dynamic content
+- Check the [API reference](/api/dialogue-manager) for more details on game integration

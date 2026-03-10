@@ -1,0 +1,559 @@
+---
+title: "C# Support"
+description: "Using Dialogue Manager with C# in Godot"
+---
+
+If you are using C# for your Godot project, Dialogue Manager provides a convenient wrapper that makes it easy to work with dialogue in C#.
+
+## Getting Started
+
+First, add the namespace to your C# script:
+
+```csharp
+using DialogueManagerRuntime;
+```
+
+This gives you access to the `DialogueManager` static class and related types.
+
+## Loading and Showing Dialogue
+
+### Show Example Balloon
+
+Display dialogue using the built-in example balloon:
+
+```csharp
+var dialogue = GD.Load<Resource>("res://example.dialogue");
+DialogueManager.ShowExampleDialogueBalloon(dialogue, "start");
+```
+
+### Show Custom Balloon
+
+If you've configured a custom balloon in [Settings](/advanced/settings):
+
+```csharp
+var dialogue = GD.Load<Resource>("res://example.dialogue");
+DialogueManager.ShowDialogueBalloon(dialogue, "start");
+```
+
+### Manual Dialogue Traversal
+
+Get dialogue lines one at a time for custom rendering:
+
+```csharp
+var dialogue = GD.Load<Resource>("res://example.dialogue");
+var line = await DialogueManager.GetNextDialogueLine(dialogue, "start");
+
+while (line != null)
+{
+    GD.Print($"{line.Character}: {line.Text}");
+    
+    // Handle responses
+    if (line.Responses.Count > 0)
+    {
+        // Show response options and get player choice
+        var selectedResponse = line.Responses[0];
+        line = await DialogueManager.GetNextDialogueLine(dialogue, selectedResponse.NextId);
+    }
+    else
+    {
+        line = await DialogueManager.GetNextDialogueLine(dialogue, line.NextId);
+    }
+}
+```
+
+## DialogueLine Properties
+
+The returned `DialogueLine` object has the same properties as the GDScript version:
+
+```csharp
+public class DialogueLine
+{
+    public string Id { get; set; }
+    public string Type { get; set; }
+    public string NextId { get; set; }
+    public string Character { get; set; }
+    public string Text { get; set; }
+    public string TranslationKey { get; set; }
+    public Array<DialogueResponse> Responses { get; }
+    public string? Time { get; }
+    public Dictionary Speeds { get; }
+    public Array<Godot.Collections.Array> InlineMutations { get; }
+    public Array<string> Tags { get; }
+}
+```
+
+### Working with Tags
+
+```csharp
+// Check if a tag exists
+if (line.HasTag("important"))
+{
+    GD.Print("This is an important line!");
+}
+
+// Get a tag's value
+var emotion = line.GetTagValue("emotion");
+if (emotion == "happy")
+{
+    // Play happy animation
+}
+```
+
+## State Management
+
+When looking for state, the Dialogue Manager searches in:
+
+1. The current scene (`GetTree().CurrentScene`)
+2. Any autoloads
+3. Anything passed in the `extraGameStates` array
+
+<Warning>
+For a property to be visible to the Dialogue Manager, it **must** have the `[Export]` attribute.
+</Warning>
+
+### Declaring State Properties
+
+```csharp
+public partial class GameState : Node
+{
+    [Export] public string PlayerName { get; set; } = "Player";
+    [Export] public int Gold { get; set; } = 100;
+    [Export] public bool HasKey { get; set; } = false;
+    [Export] public int QuestProgress { get; set; } = 0;
+}
+```
+
+### Using in Dialogue
+
+```
+if HasKey:
+    Nathan: You used the key to open the door!
+    do Gold += 50
+    Nathan: Here's {{Gold}} gold as a reward, {{PlayerName}}!
+```
+
+### Passing Extra Game States
+
+```csharp
+var gameState = GetNode<GameState>("/root/GameState");
+var inventoryManager = GetNode<InventoryManager>("/root/InventoryManager");
+
+var extraStates = new Array<Variant> { gameState, inventoryManager };
+
+var line = await DialogueManager.GetNextDialogueLine(
+    dialogue, 
+    "start", 
+    extraStates
+);
+```
+
+## Mutations
+
+Mutations in C# are methods that the dialogue system can call. They should be `async` and return a `Task` (for void mutations) or `Task<Variant>` (for mutations that return a value).
+
+### Void Mutations
+
+Mutations that perform actions but don't return a value:
+
+```csharp
+[Export]
+public async Task AskForName()
+{
+    var nameInputDialogue = GD.Load<PackedScene>("res://ui/name_input_dialog.tscn")
+        .Instantiate() as AcceptDialog;
+    
+    GetTree().Root.AddChild(nameInputDialogue);
+    nameInputDialogue.PopupCentered();
+    
+    await ToSignal(nameInputDialogue, "confirmed");
+    
+    PlayerName = nameInputDialogue.GetNode<LineEdit>("NameEdit").Text;
+    nameInputDialogue.QueueFree();
+}
+```
+
+Use in dialogue:
+
+```
+Nathan: What's your name?
+do AskForName()
+Nathan: Hello {{PlayerName}}!
+```
+
+### Returning Values
+
+Mutations can return values that can be assigned to variables or used in expressions:
+
+```csharp
+[Export]
+public async Task<Variant> AskForName()
+{
+    var nameInputDialogue = GD.Load<PackedScene>("res://ui/name_input_dialog.tscn")
+        .Instantiate() as AcceptDialog;
+    
+    GetTree().Root.AddChild(nameInputDialogue);
+    nameInputDialogue.PopupCentered();
+    
+    await ToSignal(nameInputDialogue, "confirmed");
+    
+    var name = nameInputDialogue.GetNode<LineEdit>("NameEdit").Text;
+    nameInputDialogue.QueueFree();
+    
+    return name;
+}
+```
+
+Use in dialogue:
+
+```
+Nathan: What's your name?
+set player_name = AskForName()
+Nathan: Hello {{player_name}}!
+```
+
+### Synchronous Mutations
+
+For simple mutations that don't need to await anything:
+
+```csharp
+[Export]
+public void AddGold(int amount)
+{
+    Gold += amount;
+    GD.Print($"Added {amount} gold. Total: {Gold}");
+}
+
+[Export]
+public int RollDice(int sides)
+{
+    return GD.RandRange(1, sides);
+}
+```
+
+Use in dialogue:
+
+```
+do AddGold(50)
+set roll = RollDice(20)
+Nathan: You rolled a {{roll}}!
+```
+
+## Signals
+
+The Dialogue Manager emits signals during dialogue execution. You can connect to them using event handlers or the `Connect` method.
+
+### Using Event Handlers
+
+<Tabs>
+  <Tab title="Event Handlers">
+    ```csharp
+    public override void _Ready()
+    {
+        DialogueManager.DialogueStarted += OnDialogueStarted;
+        DialogueManager.DialogueEnded += OnDialogueEnded;
+        DialogueManager.PassedLabel += OnPassedLabel;
+        DialogueManager.GotDialogue += OnGotDialogue;
+        DialogueManager.Mutated += OnMutated;
+    }
+
+    private void OnDialogueStarted(Resource dialogueResource)
+    {
+        GD.Print("Dialogue started");
+        // Pause game, hide UI, etc.
+    }
+
+    private void OnDialogueEnded(Resource dialogueResource)
+    {
+        GD.Print("Dialogue ended");
+        // Resume game, show UI, etc.
+    }
+
+    private void OnPassedLabel(string label)
+    {
+        GD.Print($"Passed label: {label}");
+        // Track dialogue progress, achievements, etc.
+    }
+
+    private void OnGotDialogue(DialogueLine line)
+    {
+        GD.Print($"Got dialogue line: {line.Character}: {line.Text}");
+        // Custom logging, analytics, etc.
+    }
+
+    private void OnMutated(Godot.Collections.Dictionary mutation)
+    {
+        GD.Print($"Mutation occurred: {mutation}");
+        // React to state changes
+    }
+    ```
+  </Tab>
+  <Tab title="Lambda Expressions">
+    ```csharp
+    public override void _Ready()
+    {
+        DialogueManager.DialogueStarted += (Resource dialogueResource) =>
+        {
+            GD.Print("Dialogue started!");
+            PauseGame();
+        };
+
+        DialogueManager.DialogueEnded += (Resource dialogueResource) =>
+        {
+            GD.Print("Dialogue ended!");
+            ResumeGame();
+        };
+
+        DialogueManager.PassedLabel += (string label) =>
+        {
+            if (label == "quest_complete")
+            {
+                CompleteQuest();
+            }
+        };
+        
+        DialogueManager.GotDialogue += (DialogueLine line) =>
+        {
+            if (line.HasTag("important"))
+            {
+                ShowImportantIndicator();
+            }
+        };
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Using Connect Method
+
+For UI elements like the responses menu, use the `Connect` approach:
+
+```csharp
+var responsesMenu = GetNode<Control>("ResponsesMenu");
+
+responsesMenu.Connect("response_selected", Callable.From((DialogueResponse response) =>
+{
+    GD.Print($"Player selected: {response.Text}");
+    // Handle response selection
+}));
+```
+
+## Runtime Generation
+
+You can create dialogue resources at runtime using `CreateResourceFromText()`:
+
+```csharp
+var dialogueText = @"~ start
+Nathan: Hello from C#!
+Nathan: This dialogue was created at runtime.
+- Cool!
+    Nathan: I know, right?
+- Amazing!
+    Nathan: Glad you think so!
+";
+
+var resource = DialogueManager.CreateResourceFromText(dialogueText);
+
+if (resource != null)
+{
+    DialogueManager.ShowExampleDialogueBalloon(resource, "start");
+}
+else
+{
+    GD.PrintErr("Failed to create dialogue resource - syntax error");
+}
+```
+
+### Dynamic Dialogue Generation
+
+```csharp
+public Resource CreateQuestDialogue(string questName, int reward)
+{
+    var dialogueText = $@"~ quest_offer
+QuestGiver: I need help with {questName}.
+QuestGiver: I'll pay you {reward} gold.
+- Accept
+    do AcceptQuest(""{questName}"")
+    QuestGiver: Thank you!
+- Decline
+    QuestGiver: Maybe next time.
+";
+    
+    return DialogueManager.CreateResourceFromText(dialogueText);
+}
+
+// Usage
+var questDialogue = CreateQuestDialogue("Dragon Slaying", 500);
+DialogueManager.ShowDialogueBalloon(questDialogue, "quest_offer");
+```
+
+## Complete Example
+
+Here's a complete example showing a C# game controller that uses Dialogue Manager:
+
+```csharp
+using Godot;
+using DialogueManagerRuntime;
+using Godot.Collections;
+
+public partial class GameController : Node
+{
+    [Export] public string PlayerName { get; set; } = "Hero";
+    [Export] public int Health { get; set; } = 100;
+    [Export] public int Gold { get; set; } = 0;
+    
+    private Resource mainDialogue;
+
+    public override void _Ready()
+    {
+        // Load dialogue
+        mainDialogue = GD.Load<Resource>("res://dialogue/main.dialogue");
+        
+        // Connect to signals
+        DialogueManager.DialogueStarted += OnDialogueStarted;
+        DialogueManager.DialogueEnded += OnDialogueEnded;
+        DialogueManager.Mutated += OnMutated;
+        
+        // Show initial dialogue
+        ShowDialogue("start");
+    }
+
+    private void ShowDialogue(string label)
+    {
+        var extraStates = new Array<Variant> { this };
+        DialogueManager.ShowDialogueBalloon(mainDialogue, label, extraStates);
+    }
+
+    private void OnDialogueStarted(Resource dialogueResource)
+    {
+        GD.Print("Dialogue started - pausing game");
+        GetTree().Paused = true;
+    }
+
+    private void OnDialogueEnded(Resource dialogueResource)
+    {
+        GD.Print("Dialogue ended - resuming game");
+        GetTree().Paused = false;
+    }
+
+    private void OnMutated(Dictionary mutation)
+    {
+        GD.Print($"State changed: {mutation}");
+        
+        // Update UI, save game, etc.
+        UpdateUI();
+    }
+
+    // Mutation methods callable from dialogue
+    [Export]
+    public async Task TakeDamage(int amount)
+    {
+        Health -= amount;
+        GD.Print($"Took {amount} damage. Health: {Health}");
+        
+        if (Health <= 0)
+        {
+            await GameOver();
+        }
+    }
+
+    [Export]
+    public void AddGold(int amount)
+    {
+        Gold += amount;
+        GD.Print($"Gained {amount} gold. Total: {Gold}");
+    }
+
+    [Export]
+    public async Task<Variant> RollDice(int sides = 6)
+    {
+        // Animate dice roll
+        await ToSignal(GetTree().CreateTimer(0.5), "timeout");
+        int result = GD.RandRange(1, sides);
+        GD.Print($"Rolled a {result}!");
+        return result;
+    }
+
+    private async Task GameOver()
+    {
+        GD.Print("Game Over!");
+        var gameOverDialogue = DialogueManager.CreateResourceFromText(@"
+~ game_over
+Narrator: You have died...
+- Try again
+    Narrator: Loading last save...
+");
+        
+        DialogueManager.ShowDialogueBalloon(gameOverDialogue, "game_over");
+        await ToSignal(DialogueManager.Instance, "dialogue_ended");
+        
+        // Reset game state
+        Health = 100;
+        Gold = 0;
+    }
+
+    private void UpdateUI()
+    {
+        // Update your game's UI with current state
+    }
+}
+```
+
+## Type Reference
+
+### DialogueManager Methods
+
+```csharp
+// Show dialogue
+static Node ShowDialogueBalloon(Resource dialogueResource, string key = "", Array<Variant>? extraGameStates = null)
+static CanvasLayer ShowExampleDialogueBalloon(Resource dialogueResource, string key = "", Array<Variant>? extraGameStates = null)
+static Node ShowDialogueBalloonScene(string/PackedScene/Node balloonScene, Resource dialogueResource, string key = "", Array<Variant>? extraGameStates = null)
+
+// Get dialogue lines
+static async Task<DialogueLine?> GetNextDialogueLine(Resource dialogueResource, string key = "", Array<Variant>? extraGameStates = null, MutationBehaviour mutation_behaviour = MutationBehaviour.Wait)
+
+// Runtime generation
+static Resource CreateResourceFromText(string text)
+
+// Utilities
+static string StaticIdToLineId(Resource dialogueResource, string staticId)
+static Array<string> StaticIdToLineIds(Resource dialogueResource, string staticId)
+```
+
+### Enums
+
+```csharp
+public enum MutationBehaviour
+{
+    Wait,        // Wait for async mutations to complete
+    DoNotWait,   // Don't wait for mutations
+    Skip         // Skip mutations entirely
+}
+
+public enum TranslationSource
+{
+    None,
+    Guess,
+    CSV,
+    PO
+}
+```
+
+## Best Practices
+
+<Note>
+1. **Always use `[Export]`** on properties you want visible to dialogue
+2. **Use `async Task`** for mutations that need to wait
+3. **Handle null returns** from `GetNextDialogueLine()` - it returns null when dialogue ends
+4. **Pass extra game states** explicitly for better control over what dialogue can access
+5. **Validate runtime-generated dialogue** - check for null after calling `CreateResourceFromText()`
+</Note>
+
+## Examples
+
+Several example projects with full C# implementations are available on [Nathan Hoad's Itch.io page](https://nathanhoad.itch.io).
+
+## See Also
+
+- [Runtime Generation](/advanced/runtime-generation) - Create dialogue dynamically
+- [Settings](/advanced/settings) - Configure Dialogue Manager behavior
+- [API Reference](/api/csharp-wrapper) - Complete C# API documentation

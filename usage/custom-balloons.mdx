@@ -1,0 +1,497 @@
+---
+title: Custom Balloons
+description: Create and customize dialogue balloons for your game's unique style
+---
+
+## Overview
+
+While Dialogue Manager includes an example balloon, you'll want to create custom balloons that match your game's art style and UI design. This guide covers copying the example balloon, customizing it, and implementing your own balloon logic.
+
+## Creating a Custom Balloon
+
+### Using the Project Menu
+
+<Steps>
+
+<Step title="Open the Project Tools menu">
+Navigate to **Project > Tools > Dialogue Manager** in the Godot editor.
+</Step>
+
+<Step title="Create a copy of the example balloon">
+Select **"Create Copy of Example Balloon"** from the menu. This will prompt you to choose a location.
+</Step>
+
+<Step title="Save to your project">
+Choose a location in your project (e.g., `res://ui/dialogue_balloon/`) and save the balloon scene and script.
+</Step>
+
+<Step title="Set as default balloon">
+Go to **Project > Project Settings > Dialogue Manager** and set your new balloon as the default balloon scene.
+</Step>
+
+</Steps>
+
+<Note>
+The example balloon includes all the essential logic and structure you need. It's much easier to customize a copy than to build from scratch.
+</Note>
+
+## Example Balloon Structure
+
+The example balloon includes these key components:
+
+```
+DialogueManagerExampleBalloon (CanvasLayer)
+├── Balloon (Control)
+│   ├── CharacterLabel (RichTextLabel)
+│   ├── DialogueLabel (DialogueLabel)
+│   ├── ResponsesMenu (VBoxContainer)
+│   └── Progress (Polygon2D)
+└── AudioStreamPlayer
+```
+
+### Key Properties
+
+```gdscript
+class_name DialogueManagerExampleBalloon extends CanvasLayer
+
+## The dialogue resource
+@export var dialogue_resource: DialogueResource
+
+## Start from a given label
+@export var start_from_label: String = ""
+
+## Auto start the dialogue
+@export var auto_start: bool = false
+
+## Block other input while dialogue is shown
+@export var will_block_other_input: bool = true
+
+## The action to advance dialogue
+@export var next_action: StringName = &"ui_accept"
+
+## The action to skip typing
+@export var skip_action: StringName = &"ui_cancel"
+```
+
+## Customizing the Balloon UI
+
+### Modifying the Visual Design
+
+<Steps>
+
+<Step title="Open your balloon scene">
+Double-click the `.tscn` file to open it in the Godot editor.
+</Step>
+
+<Step title="Customize the container">
+Modify the `Balloon` Control node:
+- Resize and reposition the dialogue box
+- Add a background panel or ninepatch
+- Adjust anchors and margins for different screen sizes
+</Step>
+
+<Step title="Style the text labels">
+Customize `CharacterLabel` and `DialogueLabel`:
+- Change fonts and sizes
+- Adjust colors and themes
+- Add drop shadows or outlines
+</Step>
+
+<Step title="Design response buttons">
+Modify the `ResponsesMenu` container:
+- Style the button theme
+- Change layout and spacing
+- Add hover effects
+</Step>
+
+</Steps>
+
+### Example: Adding a Background Panel
+
+```gdscript
+# In the scene tree, add a Panel node as a child of Balloon
+var panel = Panel.new()
+panel.name = "Background"
+
+# Create a custom style
+var style = StyleBoxFlat.new()
+style.bg_color = Color(0.1, 0.1, 0.15, 0.95)
+style.border_width_all = 2
+style.border_color = Color(0.8, 0.7, 0.5)
+style.corner_radius_all = 8
+
+panel.add_theme_stylebox_override("panel", style)
+```
+
+### Custom Fonts and Themes
+
+Create a custom theme for your balloon:
+
+<Steps>
+
+<Step title="Create a theme resource">
+Right-click in FileSystem → **New Resource** → **Theme**
+</Step>
+
+<Step title="Configure fonts and styles">
+- Add custom fonts for character names and dialogue
+- Configure button styles for responses
+- Set up color variations for different moods
+</Step>
+
+<Step title="Apply to balloon nodes">
+```gdscript
+@onready var dialogue_label: DialogueLabel = %DialogueLabel
+
+func _ready():
+	dialogue_label.theme = preload("res://ui/themes/dialogue_theme.tres")
+```
+</Step>
+
+</Steps>
+
+## Implementing Balloon Logic
+
+### Basic Balloon Flow
+
+```gdscript
+extends CanvasLayer
+
+@export var dialogue_resource: DialogueResource
+@export var start_from_label: String = ""
+
+@onready var dialogue_label: DialogueLabel = %DialogueLabel
+@onready var character_label: RichTextLabel = %CharacterLabel
+@onready var responses_menu: VBoxContainer = %ResponsesMenu
+
+var current_line: DialogueLine
+var temporary_game_states: Array = []
+
+## Start dialogue
+func start(resource: DialogueResource = null, label: String = "", extra_game_states: Array = []) -> void:
+	temporary_game_states = [self] + extra_game_states
+	
+	if resource:
+		dialogue_resource = resource
+	if not label.is_empty():
+		start_from_label = label
+	
+	current_line = await dialogue_resource.get_next_dialogue_line(
+		start_from_label,
+		temporary_game_states
+	)
+	
+	show()
+	apply_dialogue_line()
+
+## Display the current line
+func apply_dialogue_line() -> void:
+	if current_line == null:
+		queue_free()
+		return
+	
+	# Update character name
+	character_label.visible = not current_line.character.is_empty()
+	character_label.text = tr(current_line.character, "dialogue")
+	
+	# Type out dialogue
+	dialogue_label.dialogue_line = current_line
+	dialogue_label.type_out()
+	await dialogue_label.finished_typing
+	
+	# Handle responses or wait for input
+	if current_line.responses.size() > 0:
+		show_responses(current_line.responses)
+	else:
+		await_input()
+
+## Move to the next line
+func next(next_id: String) -> void:
+	current_line = await dialogue_resource.get_next_dialogue_line(
+		next_id,
+		temporary_game_states
+	)
+	apply_dialogue_line()
+```
+
+### Handling Response Selection
+
+```gdscript
+func show_responses(responses: Array) -> void:
+	# Clear previous response buttons
+	for child in responses_menu.get_children():
+		child.queue_free()
+	
+	# Create a button for each response
+	for response in responses:
+		if response.is_allowed:  # Check conditions
+			var button = Button.new()
+			button.text = response.text
+			button.pressed.connect(func(): on_response_selected(response))
+			responses_menu.add_child(button)
+	
+	responses_menu.show()
+	# Focus the first button
+	if responses_menu.get_child_count() > 0:
+		responses_menu.get_child(0).grab_focus()
+
+func on_response_selected(response: DialogueResponse) -> void:
+	responses_menu.hide()
+	next(response.next_id)
+```
+
+### Auto-advance Dialogue
+
+```gdscript
+func apply_dialogue_line() -> void:
+	if current_line == null:
+		queue_free()
+		return
+	
+	display_line()
+	
+	await dialogue_label.finished_typing
+	
+	# Handle auto-advance
+	if current_line.time != "":
+		var wait_time: float
+		if current_line.time == "auto":
+			# Calculate based on text length
+			wait_time = current_line.text.length() * 0.02
+		else:
+			wait_time = current_line.time.to_float()
+		
+		await get_tree().create_timer(wait_time).timeout
+		next(current_line.next_id)
+	elif current_line.responses.size() > 0:
+		show_responses(current_line.responses)
+	else:
+		await_input()
+```
+
+### Voice Acting Support
+
+Handle voice lines using tags:
+
+```gdscript
+@onready var voice_player: AudioStreamPlayer = %AudioStreamPlayer
+
+func apply_dialogue_line() -> void:
+	if current_line == null:
+		queue_free()
+		return
+	
+	display_line()
+	
+	# Check for voice tag
+	if current_line.has_tag("voice"):
+		var voice_path = current_line.get_tag_value("voice")
+		voice_player.stream = load(voice_path)
+		voice_player.play()
+		
+		# Wait for voice to finish
+		await voice_player.finished
+		next(current_line.next_id)
+	else:
+		await dialogue_label.finished_typing
+		await_input()
+```
+
+In your dialogue:
+
+```
+Nathan: Hello there! [voice=res://audio/voice/nathan_hello.ogg]
+```
+
+## Advanced Customization
+
+### Character Portraits
+
+Add dynamic character portraits:
+
+```gdscript
+@onready var portrait: TextureRect = %Portrait
+
+var character_portraits := {
+	"Nathan": preload("res://art/portraits/nathan.png"),
+	"Coco": preload("res://art/portraits/coco.png"),
+}
+
+func apply_dialogue_line() -> void:
+	# ... other code ...
+	
+	# Update portrait
+	if current_line.character in character_portraits:
+		portrait.texture = character_portraits[current_line.character]
+		portrait.show()
+	else:
+		portrait.hide()
+```
+
+### Animated Balloon Appearance
+
+Add enter/exit animations:
+
+```gdscript
+@onready var animation_player: AnimationPlayer = %AnimationPlayer
+
+func show():
+	super.show()
+	animation_player.play("slide_in")
+
+func hide():
+	animation_player.play("slide_out")
+	await animation_player.animation_finished
+	super.hide()
+```
+
+### Multiple Balloon Styles
+
+Switch balloon styles based on context:
+
+```gdscript
+@export var normal_theme: Theme
+@export var thought_theme: Theme
+@export var shout_theme: Theme
+
+func apply_dialogue_line() -> void:
+	# Check tags for style
+	if current_line.has_tag("thought"):
+		apply_theme(thought_theme)
+	elif current_line.has_tag("shout"):
+		apply_theme(shout_theme)
+	else:
+		apply_theme(normal_theme)
+	
+	# ... rest of the logic ...
+```
+
+In your dialogue:
+
+```
+Nathan: I wonder what that is... #thought
+Nathan: WATCH OUT! #shout
+```
+
+### Continue Indicator
+
+Add a visual indicator when waiting for player input:
+
+```gdscript
+@onready var continue_indicator: Control = %ContinueIndicator
+
+func _process(_delta: float) -> void:
+	# Show indicator when ready to advance
+	continue_indicator.visible = (
+		not dialogue_label.is_typing and
+		current_line != null and
+		current_line.responses.size() == 0
+	)
+```
+
+## Blocking Input
+
+Ensure dialogue takes priority over other game input:
+
+```gdscript
+@export var will_block_other_input: bool = true
+
+func _unhandled_input(_event: InputEvent) -> void:
+	if will_block_other_input and is_visible_in_tree():
+		get_viewport().set_input_as_handled()
+```
+
+## Theme Customization
+
+### Creating a Dialogue Theme
+
+```gdscript
+# Create a theme resource
+var theme = Theme.new()
+
+# Configure fonts
+var dialogue_font = load("res://fonts/dialogue.ttf")
+theme.set_font("font", "DialogueLabel", dialogue_font)
+theme.set_font_size("font_size", "DialogueLabel", 24)
+
+# Configure colors
+theme.set_color("default_color", "RichTextLabel", Color.WHITE)
+theme.set_color("font_selected_color", "Button", Color.YELLOW)
+
+# Configure styles
+var button_style = StyleBoxFlat.new()
+button_style.bg_color = Color(0.2, 0.2, 0.25)
+button_style.border_width_all = 2
+button_style.border_color = Color(0.6, 0.6, 0.7)
+theme.set_stylebox("normal", "Button", button_style)
+
+# Apply theme
+dialogue_label.theme = theme
+```
+
+### Dynamic Color Coding
+
+Color dialogue based on speaker:
+
+```gdscript
+var character_colors := {
+	"Nathan": Color.CYAN,
+	"Coco": Color.YELLOW,
+	"Ghost": Color.PURPLE,
+}
+
+func apply_dialogue_line() -> void:
+	var color = character_colors.get(current_line.character, Color.WHITE)
+	character_label.add_theme_color_override("default_color", color)
+	
+	# ... rest of logic ...
+```
+
+## Testing Your Balloon
+
+### Standalone Testing
+
+Enable auto-start for testing:
+
+```gdscript
+@export var auto_start: bool = true  # Enable for testing
+@export var dialogue_resource: DialogueResource = preload("res://dialogue/test.dialogue")
+@export var start_from_label: String = "test_scene"
+
+func _ready() -> void:
+	if auto_start:
+		start()
+```
+
+Run the balloon scene directly to test without loading your full game.
+
+## Setting as Default Balloon
+
+<Steps>
+
+<Step title="Open Project Settings">
+Go to **Project > Project Settings**
+</Step>
+
+<Step title="Navigate to Dialogue Manager">
+Find the **Dialogue Manager** section
+</Step>
+
+<Step title="Set custom balloon path">
+Set **Balloon Scene** to your custom balloon path (e.g., `res://ui/dialogue_balloon/custom_balloon.tscn`)
+</Step>
+
+</Steps>
+
+Now `DialogueManager.show_dialogue_balloon()` will use your custom balloon by default.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Dialogue Label" icon="text" href="/usage/dialogue-label">
+    Master the DialogueLabel node for typewriter effects
+  </Card>
+  <Card title="Translations" icon="globe" href="/usage/translations">
+    Add multi-language support to your dialogue
+  </Card>
+</CardGroup>

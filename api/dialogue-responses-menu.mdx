@@ -1,0 +1,200 @@
+---
+title: "DialogueResponsesMenu"
+description: "A Container for dialogue responses provided by Dialogue Manager"
+---
+
+`DialogueResponsesMenu` is a specialized `Container` node that manages and displays dialogue response options. It handles keyboard and mouse navigation, focus management, and response selection automatically.
+
+## Exports
+
+<ParamField path="response_template" type="Control" default="null">
+  Optionally specify a control to duplicate for each response. If not set, the menu will create a default `Button` for each response.
+  
+  The template control can have a `response` property to receive the full `DialogueResponse` object, or it will fall back to setting the `text` property.
+</ParamField>
+
+<ParamField path="next_action" type="StringName" default="&''">
+  The action for accepting a response. If empty, defaults to `ui_accept`. This can be overridden by a parent dialogue balloon.
+</ParamField>
+
+<ParamField path="auto_configure_focus" type="bool" default="true">
+  Automatically set up focus neighbours when the responses list changes. This configures keyboard navigation between response items.
+</ParamField>
+
+<ParamField path="auto_focus_first_item" type="bool" default="true">
+  Automatically focus the first item when the menu becomes visible.
+</ParamField>
+
+<ParamField path="hide_failed_responses" type="bool" default="false">
+  Hide any responses where `is_allowed` is `false`. When disabled, failed responses are shown but disabled.
+</ParamField>
+
+## Properties
+
+<ResponseField name="responses" type="Array">
+  The list of dialogue responses to display. Setting this property automatically rebuilds the menu with the new responses.
+  
+  Each response should be a `DialogueResponse` object from the dialogue line.
+</ResponseField>
+
+## Signals
+
+<ResponseField name="response_focused">
+  ```gdscript
+  response_focused(response: Variant)
+  ```
+  
+  Emitted when a response item gains focus through keyboard navigation or mouse hover.
+  
+  - `response` - The `DialogueResponse` object that was focused
+</ResponseField>
+
+<ResponseField name="response_selected">
+  ```gdscript
+  response_selected(response: Variant)
+  ```
+  
+  Emitted when a response is selected by the player (via mouse click or keyboard accept action).
+  
+  - `response` - The `DialogueResponse` object that was selected
+</ResponseField>
+
+## Methods
+
+### get_menu_items()
+
+```gdscript
+func get_menu_items() -> Array
+```
+
+Returns an array of all selectable (visible and not disallowed) items in the menu.
+
+**Returns:** An array of `Control` nodes representing the response items.
+
+### configure_focus()
+
+```gdscript
+func configure_focus() -> void
+```
+
+Manually prepares the menu for keyboard and mouse navigation. This sets up focus neighbors and connects input signals for all menu items.
+
+<Note>
+  This method is automatically called when `auto_configure_focus` is enabled and the responses list changes. You typically only need to call this manually if you've disabled auto-configuration.
+</Note>
+
+## Usage Example
+
+```gdscript
+extends CanvasLayer
+
+@onready var responses_menu: DialogueResponsesMenu = $ResponsesMenu
+@onready var dialogue_label: DialogueLabel = $DialogueLabel
+
+func _ready():
+    # Configure the menu
+    responses_menu.hide_failed_responses = false
+    responses_menu.auto_focus_first_item = true
+    
+    # Connect to signals
+    responses_menu.response_selected.connect(_on_response_selected)
+    responses_menu.response_focused.connect(_on_response_focused)
+    
+    # Start dialogue
+    show_dialogue()
+
+func show_dialogue():
+    var line = await DialogueManager.get_next_dialogue_line(dialogue_resource)
+    
+    if line.responses.size() > 0:
+        # Show response menu
+        dialogue_label.hide()
+        responses_menu.responses = line.responses
+        responses_menu.show()
+    else:
+        # Show dialogue text
+        responses_menu.hide()
+        dialogue_label.dialogue_line = line
+        dialogue_label.type_out()
+
+func _on_response_selected(response: DialogueResponse):
+    # Hide menu and continue dialogue
+    responses_menu.hide()
+    
+    # Get next line based on selected response
+    var next_line = await DialogueManager.get_next_dialogue_line(
+        dialogue_resource, 
+        response.next_id
+    )
+    
+    if next_line:
+        show_dialogue()
+    else:
+        # Dialogue ended
+        queue_free()
+
+func _on_response_focused(response: DialogueResponse):
+    # Play sound effect when hovering over responses
+    $FocusSound.play()
+```
+
+## Custom Response Template
+
+You can create a custom response button with additional styling and behavior:
+
+```gdscript
+# custom_response_button.gd
+extends PanelContainer
+
+@onready var label: Label = $Label
+@onready var icon: TextureRect = $Icon
+
+var response: DialogueResponse:
+    set(value):
+        response = value
+        label.text = response.text
+        
+        # Show different icon based on response character
+        if response.character:
+            icon.texture = load("res://icons/%s.png" % response.character)
+        
+        # Apply styling for disallowed responses
+        if not response.is_allowed:
+            modulate = Color(0.5, 0.5, 0.5, 0.7)
+```
+
+Then reference this custom control in the `response_template` export of your `DialogueResponsesMenu`.
+
+## Focus Management
+
+The menu automatically handles focus in several ways:
+
+- **Keyboard Navigation**: Arrow keys (up/down) navigate between responses
+- **Mouse Navigation**: Hovering over a response automatically focuses it
+- **Automatic Focus**: The first response is focused when the menu becomes visible
+- **Focus Neighbors**: All responses are properly linked for seamless navigation
+
+<Note>
+  Disallowed responses (where `is_allowed` is `false`) are automatically excluded from navigation and marked as disabled.
+</Note>
+
+## Integration with Dialogue Lines
+
+The responses menu works seamlessly with dialogue lines returned by `DialogueManager.get_next_dialogue_line()`:
+
+```gdscript
+var dialogue_line = await DialogueManager.get_next_dialogue_line(resource, "start")
+
+if dialogue_line.responses.size() > 0:
+    # Line has responses - show the menu
+    responses_menu.responses = dialogue_line.responses
+```
+
+Each `DialogueResponse` in the array contains:
+
+- `id` - The ID of the response
+- `next_id` - The ID of the next dialogue line if this response is chosen
+- `is_allowed` - Whether the response passed its condition check
+- `text` - The text to display for this response
+- `character` - The character name (or empty string)
+- `tags` - A list of tags for this response

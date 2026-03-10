@@ -1,0 +1,173 @@
+---
+title: "DialogueLabel"
+description: "A RichTextLabel specifically for use with Dialogue Manager dialogue"
+---
+
+`DialogueLabel` is a specialized `RichTextLabel` node that handles animated text typing effects for dialogue. It extends Godot's `RichTextLabel` with automatic typing animations, pause controls, and inline mutation support.
+
+## Exports
+
+<ParamField path="skip_action" type="StringName" default="&'ui_cancel'">
+  The input action to press to skip typing out the dialogue text.
+</ParamField>
+
+<ParamField path="seconds_per_step" type="float" default="0.02">
+  The speed with which the text types out. Lower values make typing faster.
+</ParamField>
+
+<ParamField path="pause_at_characters" type="String" default='".?!"'>
+  Automatically have a brief pause when these characters are encountered during typing.
+</ParamField>
+
+<ParamField path="skip_pause_at_character_if_followed_by" type="String" default='")&quot;"'>
+  Don't auto pause if the character after the pause character is one of these.
+</ParamField>
+
+<ParamField path="skip_pause_at_abbreviations" type="PackedStringArray" default='["Mr", "Mrs", "Ms", "Dr", "etc", "eg", "ex"]'>
+  Don't auto pause after these abbreviations (only if "." is in `pause_at_characters`). Abbreviations are limited to 5 characters in length and do not support multi-period abbreviations (e.g., "p.m.").
+</ParamField>
+
+<ParamField path="seconds_per_pause_step" type="float" default="0.3">
+  The amount of time to pause when exposing a character present in `pause_at_characters`.
+</ParamField>
+
+## Properties
+
+<ResponseField name="dialogue_line" type="Variant">
+  The current line of dialogue. Setting this property automatically updates the text displayed in the label.
+</ResponseField>
+
+<ResponseField name="is_typing" type="bool">
+  Whether the label is currently typing itself out. Read-only property that returns `false` when typing is complete or when awaiting an inline mutation.
+</ResponseField>
+
+## Signals
+
+<ResponseField name="spoke">
+  ```gdscript
+  spoke(letter: String, letter_index: int, speed: float)
+  ```
+  
+  Emitted for each letter typed out during the typing animation. Useful for adding sound effects or other per-character effects.
+  
+  - `letter` - The character that was just typed
+  - `letter_index` - The index of the character in the text
+  - `speed` - The current typing speed multiplier
+</ResponseField>
+
+<ResponseField name="skipped_typing">
+  ```gdscript
+  skipped_typing()
+  ```
+  
+  Emitted when the player skips the typing animation by pressing the skip action.
+</ResponseField>
+
+<ResponseField name="started_typing">
+  ```gdscript
+  started_typing()
+  ```
+  
+  Emitted when the label starts typing out dialogue text.
+</ResponseField>
+
+<ResponseField name="finished_typing">
+  ```gdscript
+  finished_typing()
+  ```
+  
+  Emitted when the label finishes typing out all dialogue text.
+</ResponseField>
+
+## Methods
+
+### type_out()
+
+```gdscript
+func type_out() -> void
+```
+
+Starts typing out the text of the label. This method resets the visible characters to 0 and begins the typing animation.
+
+<Note>
+  This method emits `started_typing` and handles the typing animation automatically. If `seconds_per_step` is set to 0, all text will be displayed immediately.
+</Note>
+
+**Example:**
+
+```gdscript
+@onready var dialogue_label = $DialogueLabel
+
+func show_dialogue(line: DialogueLine):
+    dialogue_label.dialogue_line = line
+    dialogue_label.type_out()
+    await dialogue_label.finished_typing
+```
+
+### skip_typing()
+
+```gdscript
+func skip_typing() -> void
+```
+
+Stops typing out the text and immediately displays all remaining characters. This method emits `skipped_typing`.
+
+**Example:**
+
+```gdscript
+func _input(event: InputEvent):
+    if event.is_action_pressed("ui_cancel") and dialogue_label.is_typing:
+        dialogue_label.skip_typing()
+```
+
+## Usage Example
+
+```gdscript
+extends Control
+
+@onready var dialogue_label: DialogueLabel = $DialogueLabel
+
+func _ready():
+    # Configure typing speed
+    dialogue_label.seconds_per_step = 0.03
+    dialogue_label.pause_at_characters = ".?!,"
+    
+    # Connect to signals
+    dialogue_label.spoke.connect(_on_letter_typed)
+    dialogue_label.finished_typing.connect(_on_typing_finished)
+    
+    # Get and display a dialogue line
+    var line = await DialogueManager.get_next_dialogue_line(dialogue_resource)
+    dialogue_label.dialogue_line = line
+    dialogue_label.type_out()
+
+func _on_letter_typed(letter: String, letter_index: int, speed: float):
+    # Play typing sound effect
+    $TypingSound.play()
+
+func _on_typing_finished():
+    # Show continue indicator
+    $ContinueIndicator.show()
+```
+
+## Advanced Features
+
+### Custom Text Updates
+
+You can override the `_update_text()` method in a subclass to customize how the label displays dialogue text:
+
+```gdscript
+class_name CustomDialogueLabel extends DialogueLabel
+
+func _update_text() -> void:
+    # Custom text formatting
+    text = "[color=yellow]%s:[/color] %s" % [dialogue_line.character, dialogue_line.text]
+```
+
+### Inline Mutations
+
+`DialogueLabel` automatically handles inline mutations defined in your dialogue script. These mutations are executed at specific character positions during the typing animation, allowing for dynamic text effects and game state changes.
+
+<Note>
+  The label waits for inline mutations to complete before continuing to type, ensuring proper synchronization between text display and game logic.
+</Note>

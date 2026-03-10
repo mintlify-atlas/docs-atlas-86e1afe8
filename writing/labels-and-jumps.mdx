@@ -1,0 +1,347 @@
+---
+title: Labels and Jumps
+description: Control dialogue flow with labels, jumps, and returns
+---
+
+## Labels
+
+Labels are markers within your dialogue that you can start from and jump to. They define entry points and destinations for dialogue flow.
+
+Labels start with `~ ` followed by a name (without spaces):
+
+```
+~ this_is_a_label
+```
+
+### The Start Label
+
+By default, dialogue begins at the `start` label:
+
+```
+~ start
+Nathan: This is where the dialogue begins.
+=> END
+```
+
+When starting dialogue from code, you can specify a different label:
+
+```gdscript
+DialogueManager.show_example_dialogue_balloon(
+	load("res://dialogue.dialogue"),
+	"custom_entry_point"  # Start at this label instead
+)
+```
+
+### Organizing with Labels
+
+Use labels to organize your dialogue into logical sections:
+
+```
+~ start
+Nathan: Welcome! What would you like to do?
+- Talk about the quest => quest_info
+- Ask about the shop => shop_info
+- Leave => END
+
+~ quest_info
+Nathan: The quest is to find the ancient artifact.
+Nathan: Are you interested?
+- Yes => accept_quest
+- No => start
+
+~ accept_quest
+Nathan: Excellent! Good luck!
+=> END
+
+~ shop_info
+Nathan: We sell potions and equipment.
+=> start
+```
+
+## Jumps (Goto)
+
+Jump lines redirect dialogue flow to a specific label. They're prefixed with `=> `:
+
+```
+=> this_is_a_label
+```
+
+### Basic Jump Example
+
+```
+~ start
+Nathan: I'll redirect you now.
+=> another_location
+
+~ another_location
+Nathan: Welcome to the other location!
+=> END
+```
+
+### Ending Dialogue
+
+Jump to `END` to terminate the dialogue:
+
+```
+~ start
+Nathan: Goodbye!
+=> END
+```
+
+### Inline Jumps in Responses
+
+Responses can include inline jumps:
+
+```
+~ start
+Nathan: Well?
+- First one
+	Nathan: You picked the first.
+	=> END
+- Another one => another_label
+- Start again => start
+
+~ another_label
+Nathan: Another one?
+=> END
+```
+
+<Note>
+When a response has an inline jump (`=> label`), any indented content below that response is ignored. The jump takes precedence.
+</Note>
+
+## Jump and Return
+
+Use "jump and return" syntax to redirect flow temporarily and then return to the original location. These use `=>< ` (with both `>` and `<`):
+
+```
+~ start
+Nathan: I'm about to call a subroutine.
+=>< subroutine
+Nathan: I'm back from the subroutine!
+=> END
+
+~ subroutine
+Nathan: This is the subroutine.
+Nathan: When it ends, we return to where we jumped from.
+=> END
+```
+
+<Steps>
+
+<Step title="Jump to label">
+The `=><` jumps to the specified label.
+</Step>
+
+<Step title="Execute dialogue">
+Dialogue at that label executes normally.
+</Step>
+
+<Step title="Hit END or file end">
+When `END` or the end of the file is reached...
+</Step>
+
+<Step title="Return to caller">
+Flow returns to the line after the `=><` jump.
+</Step>
+
+</Steps>
+
+### Nested Jump and Return
+
+Jump and return calls can be nested:
+
+```
+~ start
+Nathan: Starting.
+=>< first_subroutine
+Nathan: All done!
+=> END
+
+~ first_subroutine
+Nathan: In first subroutine.
+=>< second_subroutine
+Nathan: Back in first subroutine.
+=> END
+
+~ second_subroutine
+Nathan: In second subroutine.
+=> END
+```
+
+Execution order:
+1. start → "Starting"
+2. Jump to first_subroutine → "In first subroutine"
+3. Jump to second_subroutine → "In second subroutine"
+4. Return to first_subroutine → "Back in first subroutine"
+5. Return to start → "All done!"
+
+### Force End
+
+To end the conversation regardless of any pending returns, use `=> END!` with an exclamation mark:
+
+```
+~ start
+Nathan: Calling subroutine.
+=>< subroutine
+Nathan: This line will never be reached.
+=> END
+
+~ subroutine
+Nathan: I'm ending it all!
+=> END!
+```
+
+The `END!` terminates the entire dialogue immediately, ignoring the return.
+
+## Expression Jumps
+
+You can use expressions as jump targets by wrapping them in double curlies:
+
+```
+=> {{SomeGlobal.some_property}}
+=> {{get_next_scene_label()}}
+```
+
+The expression must resolve to a valid label name as a string.
+
+<Warning>
+**Use expression jumps with caution!** The dialogue compiler cannot verify that expression values match actual labels at compile time. If the expression returns an invalid label name, you'll get runtime errors.
+</Warning>
+
+### Expression Jump Example
+
+```
+~ start
+match player_level
+	when 1
+		set next_label = "level_1_dialogue"
+	when 2
+		set next_label = "level_2_dialogue"
+	else
+		set next_label = "default_dialogue"
+=> {{next_label}}
+
+~ level_1_dialogue
+Nathan: Welcome, beginner!
+=> END
+
+~ level_2_dialogue
+Nathan: You're progressing nicely!
+=> END
+
+~ default_dialogue
+Nathan: Hello, adventurer!
+=> END
+```
+
+## Importing Dialogue
+
+You can import dialogue from other files and jump to their labels:
+
+```
+import "res://snippets.dialogue" as snippets
+
+~ start
+Nathan: The next line will be from the snippets file:
+=>< snippets/banter
+Nathan: That was some banter!
+=> END
+```
+
+In `snippets.dialogue`:
+
+```
+~ banter
+Nathan: Blah blah blah.
+=> END
+```
+
+Use the format `namespace/label` where `namespace` is the import alias.
+
+<Accordion title="Import syntax details">
+
+**Import statement:**
+```
+import "res://path/to/file.dialogue" as namespace_name
+```
+
+**Jumping to imported labels:**
+```
+=> namespace_name/label_name
+=>< namespace_name/label_name
+```
+
+**Multiple imports:**
+```
+import "res://common.dialogue" as common
+import "res://quests.dialogue" as quests
+
+~ start
+=>< common/greeting
+=>< quests/main_quest
+=> END
+```
+
+</Accordion>
+
+## Complete Example
+
+Here's a complete example demonstrating labels, jumps, and returns:
+
+```
+import "res://common_dialogue.dialogue" as common
+
+~ start
+=>< common/greeting
+Nathan: Welcome to my shop! What brings you here?
+- Tell me about quests => quest_menu
+- I want to trade => shop_menu
+- Goodbye => goodbye
+
+~ quest_menu
+Nathan: I have several quests available.
+- Main quest => main_quest_info
+- Side quest => side_quest_info
+- Back => start
+
+~ main_quest_info
+Nathan: The main quest involves finding the ancient relic.
+- Accept it
+	set has_main_quest = true
+	Nathan: Excellent! Good luck!
+	=> END
+- Not interested => quest_menu
+
+~ side_quest_info
+Nathan: The side quest is to collect 10 herbs.
+- Accept it
+	set has_side_quest = true
+	Nathan: Great! The herbs grow near the forest.
+	=> quest_menu
+- Not interested => quest_menu
+
+~ shop_menu
+Nathan: Here's what I have in stock.
+=>< common/shop_display
+Nathan: Anything else?
+- Yes => start
+- No => goodbye
+
+~ goodbye
+Nathan: Safe travels!
+=> END
+```
+
+This example shows:
+- Multiple labels organizing different conversation sections
+- Jump and return for reusable dialogue snippets
+- Inline jumps in responses for quick navigation
+- Imported dialogue from another file
+- A hub-and-spoke conversation structure
+
+## Next Steps
+
+- Add [conditions and mutations](/writing/conditions-and-mutations) to make jumps dynamic
+- Use [randomization](/writing/randomization) with jumps for variety
+- Learn about [responses and branching](/writing/responses-and-branching) for more options

@@ -1,0 +1,185 @@
+---
+title: "DialogueResource"
+description: "A resource containing compiled dialogue lines"
+---
+
+`DialogueResource` is a custom resource class that represents a collection of dialogue lines for use with `DialogueManager`. It contains the compiled dialogue data, labels, character names, and state information.
+
+## Properties
+
+### using_states
+
+```gdscript
+@export var using_states: PackedStringArray = []
+```
+
+A list of state shortcuts (autoload names) that are automatically injected into the game state when this dialogue is run. These autoloads become available to conditions and mutations in the dialogue.
+
+**Example:**
+```gdscript
+# If using_states = ["GameState", "PlayerData"]
+# These autoloads will be accessible in your dialogue conditions
+```
+
+### labels
+
+```gdscript
+@export var labels: Dictionary = {}
+```
+
+A map of label names to the line IDs they point to. Labels are used to mark specific points in your dialogue that can be jumped to.
+
+**Example:**
+```gdscript
+{
+    "greeting": "0",
+    "farewell": "25",
+    "shop_menu": "42"
+}
+```
+
+### character_names
+
+```gdscript
+@export var character_names: PackedStringArray = []
+```
+
+A list of all unique character names found in the dialogue resource. Useful for generating character lists or validating character references.
+
+### first_label
+
+```gdscript
+@export var first_label: String = ""
+```
+
+The name of the first label encountered in the dialogue file. If no labels exist, this will be empty and dialogue starts from the first line.
+
+### lines
+
+```gdscript
+@export var lines: Dictionary = {}
+```
+
+A map of line IDs to their encoded dialogue data. This contains all the dialogue lines, mutations, responses, and other dialogue structures in the resource.
+
+<Note>
+This property contains internal encoded data. Use `get_next_dialogue_line()` to properly retrieve and process dialogue lines.
+</Note>
+
+## Methods
+
+### get_next_dialogue_line
+
+```gdscript
+func get_next_dialogue_line(
+    label: String = "", 
+    extra_game_states: Array = [], 
+    mutation_behaviour: DMConstants.MutationBehaviour = DMConstants.MutationBehaviour.Wait
+) -> DialogueLine
+```
+
+**Must be used with `await`.**
+
+Get the next printable line of dialogue, starting from a referenced line. This is a convenience method that calls `DialogueManager.get_next_dialogue_line()` with this resource.
+
+<ParamField name="label" type="String" default="">
+  The starting label or line ID (can be a label string or stringified line number). If empty, starts from the first label or beginning of the file
+</ParamField>
+
+<ParamField name="extra_game_states" type="Array" default="[]">
+  Additional nodes/objects to temporarily add to game state shortcuts for conditions and mutations
+</ParamField>
+
+<ParamField name="mutation_behaviour" type="DMConstants.MutationBehaviour" default="DMConstants.MutationBehaviour.Wait">
+  How to handle mutation lines:
+  - `Wait` - Await mutation lines (default)
+  - `DoNotWait` - Run mutations but don't wait for them
+  - `Skip` - Skip mutations entirely
+</ParamField>
+
+<ResponseField name="returns" type="DialogueLine">
+  The next dialogue line, or `null` if the conversation has ended
+</ResponseField>
+
+**Example:**
+```gdscript
+var dialogue = preload("res://dialogue/intro.dialogue")
+var line = await dialogue.get_next_dialogue_line("greeting")
+if line != null:
+    print(line.character + ": " + line.text)
+```
+
+### get_labels
+
+```gdscript
+func get_labels() -> PackedStringArray
+```
+
+Get a list of all label names found in the dialogue file.
+
+<ResponseField name="returns" type="PackedStringArray">
+  Array of label names as strings
+</ResponseField>
+
+**Example:**
+```gdscript
+var dialogue = preload("res://dialogue/intro.dialogue")
+var labels = dialogue.get_labels()
+for label in labels:
+    print("Found label: " + label)
+```
+
+## Usage Examples
+
+### Loading and Starting Dialogue
+
+```gdscript
+# Load a dialogue resource
+var dialogue = preload("res://dialogue/intro.dialogue")
+
+# Start from a specific label
+var line = await dialogue.get_next_dialogue_line("greeting")
+
+# Start from the beginning
+var line = await dialogue.get_next_dialogue_line()
+```
+
+### Passing Extra Game States
+
+```gdscript
+var dialogue = preload("res://dialogue/shop.dialogue")
+
+# Make the shop node available to dialogue conditions
+var line = await dialogue.get_next_dialogue_line("shop_menu", [shop_node])
+```
+
+### Checking Available Labels
+
+```gdscript
+var dialogue = preload("res://dialogue/quest.dialogue")
+
+if "quest_complete" in dialogue.get_labels():
+    var line = await dialogue.get_next_dialogue_line("quest_complete")
+else:
+    var line = await dialogue.get_next_dialogue_line("quest_start")
+```
+
+### Using with DialogueManager
+
+```gdscript
+# These two calls are equivalent:
+var line1 = await dialogue.get_next_dialogue_line("start")
+var line2 = await DialogueManager.get_next_dialogue_line(dialogue, "start")
+
+# The resource method is just a convenience wrapper
+```
+
+## Notes
+
+<Note>
+DialogueResource files are typically created and compiled automatically by the Dialogue Manager editor. You don't usually create them manually in code.
+</Note>
+
+<Note>
+The `using_states` property is set in the dialogue file using the `using` keyword at the top of the file.
+</Note>

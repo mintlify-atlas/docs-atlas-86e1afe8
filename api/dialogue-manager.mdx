@@ -1,0 +1,324 @@
+---
+title: "DialogueManager"
+description: "The singleton that manages dialogue execution and balloon display"
+---
+
+The `DialogueManager` is an autoloaded singleton that handles dialogue execution, state management, and balloon display. It processes dialogue lines, runs mutations, and emits signals for dialogue events.
+
+## Signals
+
+### dialogue_started
+
+```gdscript
+signal dialogue_started(resource: DialogueResource)
+```
+
+Emitted when a dialogue balloon is created by `DialogueManager` and dialogue begins.
+
+<ParamField name="resource" type="DialogueResource">
+  The dialogue resource that started
+</ParamField>
+
+### passed_label
+
+```gdscript
+signal passed_label(label: String)
+```
+
+Emitted when a label marker is passed through during dialogue traversal, usually when jumping from a goto line.
+
+<ParamField name="label" type="String">
+  The name of the label that was passed
+</ParamField>
+
+### got_dialogue
+
+```gdscript
+signal got_dialogue(line: DialogueLine)
+```
+
+Emitted when a line of dialogue is encountered.
+
+<ParamField name="line" type="DialogueLine">
+  The dialogue line that was found
+</ParamField>
+
+### mutated
+
+```gdscript
+signal mutated(mutation: Dictionary)
+```
+
+Emitted when a mutation line is about to be run (not including `set` lines).
+
+<ParamField name="mutation" type="Dictionary">
+  The mutation data being executed
+</ParamField>
+
+### dialogue_ended
+
+```gdscript
+signal dialogue_ended(resource: DialogueResource)
+```
+
+Emitted when the next line of dialogue is empty, indicating the conversation has ended.
+
+<ParamField name="resource" type="DialogueResource">
+  The dialogue resource that ended
+</ParamField>
+
+## Properties
+
+### game_states
+
+```gdscript
+var game_states: Array = []
+```
+
+The list of global objects that dialogue can query. These are made available to conditions and mutations in your dialogue files.
+
+### include_singletons
+
+```gdscript
+var include_singletons: bool = true
+```
+
+Allow dialogue to call singletons (autoloads).
+
+### include_classes
+
+```gdscript
+var include_classes: bool = true
+```
+
+Allow dialogue to call static methods and properties on classes.
+
+### get_current_scene
+
+```gdscript
+var get_current_scene: Callable
+```
+
+Used to resolve the current scene. Override this if your game manages the current scene itself.
+
+**Default implementation:**
+```gdscript
+func() -> Node:
+    var current_scene: Node = Engine.get_main_loop().current_scene
+    if current_scene == null:
+        var root: Node = (Engine.get_main_loop() as SceneTree).root
+        current_scene = root.get_child(root.get_child_count() - 1)
+    return current_scene
+```
+
+## Methods
+
+### show_dialogue_balloon
+
+```gdscript
+func show_dialogue_balloon(
+    resource: DialogueResource, 
+    label: String = "", 
+    extra_game_states: Array = []
+) -> Node
+```
+
+Opens the dialogue balloon configured in settings (or the example balloon if none has been set).
+
+<ParamField name="resource" type="DialogueResource" required>
+  The dialogue resource to display
+</ParamField>
+
+<ParamField name="label" type="String" default="">
+  The starting label or line ID. If empty, starts from the first label or beginning of the file
+</ParamField>
+
+<ParamField name="extra_game_states" type="Array" default="[]">
+  Additional nodes/objects to temporarily add to game state shortcuts for conditions and mutations
+</ParamField>
+
+<ResponseField name="returns" type="Node">
+  The balloon's base node in case you want to `queue_free()` it yourself
+</ResponseField>
+
+**Example:**
+```gdscript
+DialogueManager.show_dialogue_balloon(my_dialogue, "start")
+```
+
+### show_dialogue_balloon_scene
+
+```gdscript
+func show_dialogue_balloon_scene(
+    balloon_scene: Node | String, 
+    resource: DialogueResource, 
+    label: String = "", 
+    extra_game_states: Array = []
+) -> Node
+```
+
+Opens a specific dialogue balloon scene.
+
+<ParamField name="balloon_scene" type="Node | String" required>
+  The balloon scene to use (either a Node instance or path to scene)
+</ParamField>
+
+<ParamField name="resource" type="DialogueResource" required>
+  The dialogue resource to display
+</ParamField>
+
+<ParamField name="label" type="String" default="">
+  The starting label or line ID
+</ParamField>
+
+<ParamField name="extra_game_states" type="Array" default="[]">
+  Additional game state objects
+</ParamField>
+
+<ResponseField name="returns" type="Node">
+  The balloon's base node
+</ResponseField>
+
+### get_next_dialogue_line
+
+```gdscript
+func get_next_dialogue_line(
+    resource: DialogueResource, 
+    key: String = "", 
+    extra_game_states: Array = [], 
+    mutation_behaviour: MutationBehaviour = MutationBehaviour.Wait
+) -> DialogueLine
+```
+
+**Must be used with `await`.**
+
+Given a resource and label/ID, finds the next printable line of dialogue, running mutations along the way.
+
+<ParamField name="resource" type="DialogueResource" required>
+  The dialogue resource to query
+</ParamField>
+
+<ParamField name="key" type="String" default="">
+  The starting label or line ID. If empty, starts from the first label
+</ParamField>
+
+<ParamField name="extra_game_states" type="Array" default="[]">
+  Additional nodes/objects to temporarily add to game state shortcuts
+</ParamField>
+
+<ParamField name="mutation_behaviour" type="MutationBehaviour" default="MutationBehaviour.Wait">
+  How to handle mutation lines:
+  - `Wait` - Await mutation lines (default, recommended)
+  - `DoNotWait` - Run mutations but don't wait for them
+  - `Skip` - Skip mutations entirely
+</ParamField>
+
+<ResponseField name="returns" type="DialogueLine">
+  A DialogueLine object containing the dialogue data, or `null` if no next line is found
+</ResponseField>
+
+<Note>
+The example balloon only supports `Wait` mutation behaviour. In most cases, you should leave this as the default.
+</Note>
+
+**Example:**
+```gdscript
+var line: DialogueLine = await DialogueManager.get_next_dialogue_line(my_dialogue, "start")
+if line != null:
+    print(line.character + ": " + line.text)
+```
+
+### show_example_dialogue_balloon
+
+```gdscript
+func show_example_dialogue_balloon(
+    resource: DialogueResource, 
+    label: String = "", 
+    extra_game_states: Array = []
+) -> CanvasLayer
+```
+
+Opens the example balloon. If your game viewport is less than 400 pixels, it will open the low-res balloon. Otherwise, it will open the standard balloon. The balloon will close automatically once dialogue runs out.
+
+<ParamField name="resource" type="DialogueResource" required>
+  The dialogue resource to display
+</ParamField>
+
+<ParamField name="label" type="String" default="">
+  The starting label or line ID
+</ParamField>
+
+<ParamField name="extra_game_states" type="Array" default="[]">
+  Additional game state objects
+</ParamField>
+
+<ResponseField name="returns" type="CanvasLayer">
+  The example balloon's base CanvasLayer in case you want to `queue_free()` it yourself
+</ResponseField>
+
+**Example:**
+```gdscript
+DialogueManager.show_example_dialogue_balloon(preload("res://dialogue/intro.dialogue"), "greeting")
+```
+
+### get_line
+
+```gdscript
+func get_line(
+    resource: DialogueResource, 
+    key: String, 
+    extra_game_states: Array
+) -> DialogueLine
+```
+
+Get a specific line by its ID. This is used internally by `get_next_dialogue_line()`.
+
+<ParamField name="resource" type="DialogueResource" required>
+  The dialogue resource to query
+</ParamField>
+
+<ParamField name="key" type="String" required>
+  The line ID or label to retrieve
+</ParamField>
+
+<ParamField name="extra_game_states" type="Array" required>
+  Game state objects for resolving conditions
+</ParamField>
+
+<ResponseField name="returns" type="DialogueLine">
+  The requested dialogue line, or `null` if not found
+</ResponseField>
+
+## Enums
+
+### MutationBehaviour
+
+Controls how mutation lines are processed during dialogue execution.
+
+```gdscript
+enum MutationBehaviour {
+    Wait,        # Await mutation lines before continuing (default)
+    DoNotWait,   # Run mutations but don't wait for completion
+    Skip         # Skip mutation lines entirely
+}
+```
+
+<Expandable title="Usage Example">
+```gdscript
+# Wait for mutations (recommended)
+var line = await DialogueManager.get_next_dialogue_line(
+    my_dialogue, 
+    "start", 
+    [], 
+    DialogueManager.MutationBehaviour.Wait
+)
+
+# Don't wait for mutations (advanced use)
+var line = await DialogueManager.get_next_dialogue_line(
+    my_dialogue, 
+    "start", 
+    [], 
+    DialogueManager.MutationBehaviour.DoNotWait
+)
+```
+</Expandable>

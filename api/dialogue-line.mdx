@@ -1,0 +1,348 @@
+---
+title: "DialogueLine"
+description: "A line of dialogue returned from DialogueManager"
+---
+
+`DialogueLine` represents a single line of dialogue returned by `DialogueManager`. It contains the character, text, responses, tags, and other metadata for displaying dialogue in your game.
+
+## Properties
+
+### id
+
+```gdscript
+var id: String
+```
+
+The unique ID of this dialogue line. This is typically the line number from the dialogue file.
+
+### type
+
+```gdscript
+var type: String = DMConstants.TYPE_DIALOGUE
+```
+
+The internal type of this dialogue object. One of:
+- `DMConstants.TYPE_DIALOGUE` - A normal dialogue line
+- `DMConstants.TYPE_MUTATION` - A mutation line (handled internally)
+
+<Note>
+Mutation lines are processed internally by DialogueManager. You will typically only receive dialogue lines with `TYPE_DIALOGUE`.
+</Note>
+
+### next_id
+
+```gdscript
+var next_id: String = ""
+```
+
+The ID of the next line of dialogue after this one. Used internally to traverse the dialogue tree.
+
+### character
+
+```gdscript
+var character: String = ""
+```
+
+The name of the character speaking this line. Will be an empty string if no character is specified.
+
+**Example:**
+```gdscript
+if line.character != "":
+    character_label.text = line.character
+    character_portrait.texture = get_portrait(line.character)
+```
+
+### character_replacements
+
+```gdscript
+var character_replacements: Array[Dictionary] = []
+```
+
+A dictionary of variable replacements for the character name. Generally for internal use only.
+
+### text
+
+```gdscript
+var text: String = ""
+```
+
+The dialogue text being spoken. This is the main content to display.
+
+**Example:**
+```gdscript
+dialogue_label.text = line.text
+```
+
+### text_replacements
+
+```gdscript
+var text_replacements: Array[Dictionary] = []
+```
+
+A dictionary of replacements for the text, used for variable interpolation. Generally for internal use only.
+
+### translation_key
+
+```gdscript
+var translation_key: String = ""
+```
+
+The key to use for translating this line. If no explicit ID was specified on the line in the dialogue file, this will be the same as the text.
+
+**Example:**
+```gdscript
+var translated = tr(line.translation_key)
+```
+
+### speeds
+
+```gdscript
+var speeds: Dictionary = {}
+```
+
+A map of speed changes when typing out the dialogue text. Used by `DialogueLabel` for controlling text reveal speed at specific character positions.
+
+### inline_mutations
+
+```gdscript
+var inline_mutations: Array[Array] = []
+```
+
+A list of mutations to run while typing out the dialogue text. These are triggered at specific character positions during text reveal.
+
+### responses
+
+```gdscript
+var responses: Array = []
+```
+
+A list of `DialogueResponse` objects attached to this line of dialogue. If this array is not empty, the player needs to choose a response before continuing.
+
+**Example:**
+```gdscript
+if line.responses.size() > 0:
+    # Show response menu
+    for response in line.responses:
+        if response.is_allowed:
+            add_response_button(response.text, response)
+else:
+    # Continue to next line automatically
+    pass
+```
+
+### concurrent_lines
+
+```gdscript
+var concurrent_lines: Array[DialogueLine] = []
+```
+
+A list of lines that are to be spoken at the same time as this one. Useful for simultaneous dialogue or group conversations.
+
+### extra_game_states
+
+```gdscript
+var extra_game_states: Array = []
+```
+
+A list of any extra game state objects to check when resolving variables and mutations for this line.
+
+### time
+
+```gdscript
+var time: String = ""
+```
+
+How long to show this line before advancing to the next. Can be:
+- A float as a string (e.g., `"2.5"` for 2.5 seconds)
+- `"auto"` to automatically calculate based on text length
+- Empty string (`""`) to wait for player input
+
+**Example:**
+```gdscript
+if line.time == "auto":
+    var duration = calculate_auto_duration(line.text)
+    await get_tree().create_timer(duration).timeout
+elif line.time != "":
+    await get_tree().create_timer(float(line.time)).timeout
+```
+
+### tags
+
+```gdscript
+var tags: PackedStringArray = []
+```
+
+Any `#tags` that were included in the line. Tags can be used to trigger events, set moods, control presentation, or pass custom data.
+
+**Example:**
+```gdscript
+if line.has_tag("mood"):
+    set_character_mood(line.get_tag_value("mood"))
+
+if "shake" in line.tags:
+    shake_screen()
+```
+
+### mutation
+
+```gdscript
+var mutation: Dictionary = {}
+```
+
+The mutation details if this is a mutation line (where `type == TYPE_MUTATION`). This is used internally by DialogueManager.
+
+## Methods
+
+### has_tag
+
+```gdscript
+func has_tag(tag_name: String) -> bool
+```
+
+Check if a dialogue line has a given tag (supports both plain tags and key=value tags).
+
+<ParamField name="tag_name" type="String" required>
+  The name of the tag to check for
+</ParamField>
+
+<ResponseField name="returns" type="bool">
+  `true` if the tag exists, `false` otherwise
+</ResponseField>
+
+**Example:**
+```gdscript
+# In dialogue: Nathan: Hello there! #mood=happy #urgent
+
+if line.has_tag("mood"):
+    print("This line has a mood tag")
+
+if line.has_tag("urgent"):
+    print("This is urgent!")
+```
+
+### get_tag_value
+
+```gdscript
+func get_tag_value(tag_name: String) -> String
+```
+
+Get the value of a tag if the tag is in the form of `tag=value`.
+
+<ParamField name="tag_name" type="String" required>
+  The name of the tag whose value to retrieve
+</ParamField>
+
+<ResponseField name="returns" type="String">
+  The value of the tag, or an empty string if the tag doesn't exist or has no value
+</ResponseField>
+
+**Example:**
+```gdscript
+# In dialogue: Nathan: Hello there! #mood=happy #camera=closeup
+
+var mood = line.get_tag_value("mood")  # Returns "happy"
+var camera = line.get_tag_value("camera")  # Returns "closeup"
+var missing = line.get_tag_value("other")  # Returns ""
+```
+
+## Usage Examples
+
+### Basic Dialogue Display
+
+```gdscript
+var line = await DialogueManager.get_next_dialogue_line(dialogue_resource, "start")
+
+while line != null:
+    # Display character name
+    if line.character != "":
+        character_name_label.text = line.character
+    
+    # Display dialogue text
+    dialogue_label.text = line.text
+    
+    # Check for responses
+    if line.responses.size() > 0:
+        # Show response menu
+        for response in line.responses:
+            if response.is_allowed:
+                add_response_button(response)
+        
+        # Wait for player to choose
+        var chosen_response = await response_chosen
+        line = await DialogueManager.get_next_dialogue_line(dialogue_resource, chosen_response.next_id)
+    else:
+        # Wait for player input to continue
+        await continue_pressed
+        line = await DialogueManager.get_next_dialogue_line(dialogue_resource, line.next_id)
+```
+
+### Using Tags for Events
+
+```gdscript
+var line = await DialogueManager.get_next_dialogue_line(dialogue_resource)
+
+# Check for emotion tags
+if line.has_tag("emotion"):
+    var emotion = line.get_tag_value("emotion")
+    character_sprite.play_animation(emotion)
+
+# Check for sound effects
+if line.has_tag("sfx"):
+    var sound = line.get_tag_value("sfx")
+    audio_player.stream = load("res://sounds/" + sound + ".ogg")
+    audio_player.play()
+
+# Check for camera movement
+if line.has_tag("camera"):
+    var camera_action = line.get_tag_value("camera")
+    match camera_action:
+        "zoom_in":
+            camera.zoom_in()
+        "pan_left":
+            camera.pan_left()
+```
+
+### Handling Concurrent Lines
+
+```gdscript
+var line = await DialogueManager.get_next_dialogue_line(dialogue_resource)
+
+# Display main dialogue
+display_dialogue(line)
+
+# Display concurrent lines (e.g., multiple characters speaking at once)
+for concurrent_line in line.concurrent_lines:
+    display_concurrent_dialogue(concurrent_line)
+```
+
+### Auto-advancing Dialogue
+
+```gdscript
+var line = await DialogueManager.get_next_dialogue_line(dialogue_resource)
+
+# Display the line
+dialogue_label.text = line.text
+
+# Handle auto-advance timing
+if line.time != "":
+    if line.time == "auto":
+        # Calculate based on text length (e.g., 0.05 seconds per character)
+        var duration = len(line.text) * 0.05
+        await get_tree().create_timer(duration).timeout
+    else:
+        # Use explicit timing
+        await get_tree().create_timer(float(line.time)).timeout
+    
+    # Move to next line
+    line = await DialogueManager.get_next_dialogue_line(dialogue_resource, line.next_id)
+```
+
+## Notes
+
+<Note>
+Always check if a line is `null` before accessing its properties. A `null` line indicates the conversation has ended.
+</Note>
+
+<Note>
+The `text` property contains the final processed text with all variable replacements already applied. You don't need to manually resolve variables.
+</Note>

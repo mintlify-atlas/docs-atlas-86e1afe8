@@ -1,0 +1,147 @@
+---
+title: Basic Dialogue
+description: Learn how to write basic dialogue with character names, text, and BBCode formatting
+---
+
+## Writing Your First Dialogue
+
+The most basic dialogue is just a string of text:
+
+```
+This is some dialogue.
+```
+
+This line will be displayed to the player as-is.
+
+## Adding Character Names
+
+To specify who is speaking, include a character name before a colon:
+
+```
+Nathan: This is me talking.
+```
+
+The text before the colon becomes the character name, and everything after it is the dialogue text.
+
+### Variable Character Names
+
+If a character's name is based on a variable (like player-chosen names), you can use double curlies:
+
+```
+{{SomeGlobal.player_name}}: My name was provided by the player.
+{{character_name}}: This works with any variable.
+```
+
+## Multiple Lines
+
+Lines of dialogue are written one after another:
+
+```
+Nathan: I'll say this first.
+Nathan: Then I'll say this line.
+Coco: And now I'm talking!
+```
+
+Each line will be displayed in sequence.
+
+## BBCode Formatting
+
+You can enhance your dialogue with [BBCode](https://docs.godotengine.org/en/stable/tutorials/ui/bbcode_in_richtextlabel.html#reference). Dialogue Manager supports all of Godot's `RichTextLabel` BBCode tags:
+
+```
+Nathan: This text is [b]bold[/b] and this is [i]italic[/i].
+Nathan: You can also use [color=red]colors[/color]!
+Nathan: [wave]Wavy text![/wave]
+```
+
+### Special BBCode Tags
+
+Dialogue Manager provides several additional BBCode tags:
+
+<Accordion title="[wait] - Pause dialogue typing">
+
+**Wait for seconds:**
+```
+Nathan: Wait a moment[wait=2] before continuing.
+```
+
+**Wait for input action:**
+```
+Nathan: Press a button[wait="ui_accept"] to continue.
+```
+
+**Wait for any of multiple actions:**
+```
+Nathan: Press any button[wait=["ui_accept","ui_cancel"]] to continue.
+```
+
+**Wait for any action:**
+```
+Nathan: Press anything[wait] to continue.
+```
+
+</Accordion>
+
+<Accordion title="[speed] - Change typing speed">
+
+Multiply the default typing speed by a number:
+
+```
+Nathan: This is normal speed.
+Nathan: [speed=2]This is twice as fast![/speed]
+Nathan: [speed=0.5]This is half speed...[/speed]
+```
+
+</Accordion>
+
+<Accordion title="[next] - Auto-continue dialogue">
+
+**Wait for specific seconds:**
+```
+Nathan: This will auto-continue.[next=2]
+Nathan: After 2 seconds!
+```
+
+**Auto-calculate based on text length:**
+```
+Nathan: This will wait based on length.[next=auto]
+```
+
+</Accordion>
+
+<Accordion title="[[Random text]] - Pick random text inline">
+
+Use double square brackets to pick one option at random within dialogue:
+
+```
+Nathan: I'm feeling [[happy|sad|excited|tired]] today!
+Nathan: That's [[great|wonderful|amazing]]!
+```
+
+Each time the line is displayed, one random option will be chosen.
+
+</Accordion>
+
+## Complete Example
+
+Here's a complete example combining multiple features:
+
+```
+~ start
+Nathan: [b]Welcome![/b] [wave]I'm so glad you're here.[/wave]
+Nathan: Let me tell you something [i]very[/i] important[wait=1.5]...
+Nathan: [speed=0.5]Just kidding![/speed] [wait=2]
+Nathan: I hope you're having a [[great|wonderful|fantastic]] day!
+=> END
+```
+
+<Note>
+All BBCode tags must be properly closed with their corresponding closing tag (e.g., `[b]text[/b]`), except for the special Dialogue Manager tags like `[wait]`, `[speed]`, and `[next]`.
+</Note>
+
+## Next Steps
+
+Now that you understand basic dialogue, you can:
+- Add [responses and branching](/writing/responses-and-branching) for player choices
+- Use [variables and tags](/writing/variables-and-tags) to make dialogue dynamic
+- Learn about [labels and jumps](/writing/labels-and-jumps) to control dialogue flow

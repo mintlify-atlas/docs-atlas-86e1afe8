@@ -1,80 +1,185 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Create your first dialogue in under 5 minutes
 ---
 
-## Get started in three steps
-
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will get you from zero to a working dialogue conversation in your game in just a few minutes.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Make sure you've [installed and enabled](/installation) the Dialogue Manager plugin before starting this guide.
 </Note>
+
+## Create Your First Dialogue
+
+<Steps>
+  <Step title="Open the Dialogue tab">
+    Click the **Dialogue** tab in the editor (next to 2D, 3D, Script, and AssetLib).
+    
+    ![Dialogue tab](/images/dialogue-tab.jpg)
+  </Step>
+  
+  <Step title="Create a new dialogue file">
+    Click the **new dialogue file** button in the toolbar.
+    
+    ![New dialogue button](/images/new-open-buttons.jpg)
+    
+    Save it as `res://my_first_dialogue.dialogue`.
+  </Step>
+  
+  <Step title="Write your dialogue">
+    In the dialogue editor, write your first conversation:
+    
+    ```
+    ~ start
+    
+    Nathan: Hi there! Welcome to Dialogue Manager.
+    Nathan: This is a simple dialogue example.
+    Nathan: You can add as many lines as you want.
+    ```
+    
+    <Tip>
+      Lines starting with `~` are **labels** - they mark different entry points in your dialogue. The `start` label is commonly used as the default starting point.
+    </Tip>
+  </Step>
+</Steps>
+
+## Add Player Responses
+
+Let's make the dialogue interactive by adding response options:
+
+```
+~ start
+
+Nathan: Hi there! Welcome to Dialogue Manager.
+Nathan: Would you like to learn more?
+- Yes, tell me more!
+	Nathan: Great! Dialogue Manager makes it easy to create branching conversations.
+	Nathan: You can add conditions, variables, and much more.
+- No, I'm good.
+	Nathan: No problem! Come back anytime.
+```
+
+<Note>
+  Response options start with `- ` and their nested dialogue is indented with a tab.
+</Note>
+
+## Show Dialogue in Your Game
+
+Now let's make your dialogue appear in the game.
+
+<Steps>
+  <Step title="Create a test scene">
+    Create a new scene with a basic node (like a `Node2D` or `Control`).
+  </Step>
+  
+  <Step title="Add a script">
+    Attach a script to your node with the following code:
+    
+    ```gdscript
+    extends Node2D
+    
+    func _ready():
+    	# Load your dialogue resource
+    	var dialogue_resource = load("res://my_first_dialogue.dialogue")
+    	
+    	# Show the dialogue starting from the "start" label
+    	DialogueManager.show_dialogue_balloon(dialogue_resource, "start")
+    ```
+    
+    <Tip>
+      `DialogueManager.show_dialogue_balloon()` is the simplest way to show dialogue. It uses the built-in example balloon by default.
+    </Tip>
+  </Step>
+  
+  <Step title="Run your scene">
+    Press **F6** to run your current scene. You should see your dialogue appear in a speech balloon!
+    
+    - Click or press **Space/Enter** to advance through dialogue
+    - Use **Arrow Keys** and **Enter** to select response options
+    - Press **Escape** to skip typing animation
+  </Step>
+</Steps>
+
+## Complete Example
+
+Here's a more complete dialogue example showcasing different features:
+
+```
+~ start
+
+Nathan: Welcome to my shop!
+Nathan: What can I help you with today?
+- Tell me about yourself
+	Nathan: I'm Nathan, the shopkeeper.
+	Nathan: I've been running this place for years.
+	=> shop_menu
+- Show me your wares => shop_menu
+- Goodbye => END
+
+~ shop_menu
+
+Nathan: Here's what I have in stock.
+- Health Potion ($10)
+	Nathan: A classic choice!
+	=> shop_menu
+- Magic Scroll ($25)
+	Nathan: Powerful stuff!
+	=> shop_menu
+- Nothing for now
+	Nathan: Come back anytime!
+	=> END
+```
+
+<Tip>
+  - `=> label_name` jumps to another label
+  - `=> END` ends the dialogue conversation
+</Tip>
+
+## Using Dialogue in Different Ways
+
+Besides `show_dialogue_balloon()`, you can also get dialogue lines manually for more control:
+
+```gdscript
+extends Node2D
+
+func _ready():
+	var dialogue_resource = load("res://my_first_dialogue.dialogue")
+	
+	# Get a single line of dialogue
+	var dialogue_line = await DialogueManager.get_next_dialogue_line(dialogue_resource, "start")
+	
+	# Access the line's properties
+	print(dialogue_line.character)  # "Nathan"
+	print(dialogue_line.text)       # "Hi there! Welcome to Dialogue Manager."
+	
+	# Get the next line
+	dialogue_line = await DialogueManager.get_next_dialogue_line(dialogue_resource, dialogue_line.next_id)
+```
+
+<Note>
+  This approach gives you full control over how dialogue is displayed, letting you create custom dialogue UI that matches your game's style.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Basic Dialogue" icon="message" href="/basic-dialogue">
+    Learn the full dialogue syntax including BBCode, tags, and randomization
+  </Card>
+  <Card title="Using Dialogue" icon="code" href="/using-dialogue">
+    Deep dive into the API and advanced integration techniques
+  </Card>
+  <Card title="Conditions & Mutations" icon="code-branch" href="/conditions-mutations">
+    Add game state checks and variable modifications to your dialogue
+  </Card>
+  <Card title="Custom Balloons" icon="paint-brush" href="/dialogue-balloons">
+    Create custom dialogue UI for your game
+  </Card>
+</CardGroup>
+
+## Tips for Writing Dialogue
+
+- **Use descriptive labels**: Name your labels based on what happens (`~ shop_intro`, `~ quest_accept`)
+- **Keep responses short**: Long response text can be hard to scan
+- **Test frequently**: Run your dialogue often to catch typos and flow issues
+- **Use comments**: Add `# This is a comment` to document complex dialogue sections

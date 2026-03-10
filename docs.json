@@ -1,122 +1,109 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Dialogue Manager",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#2c1946",
+    "light": "#bc95fa",
+    "dark": "#644c8c"
   },
-  "favicon": "/favicon.svg",
+
+  "logo": {
+    "light": "https://media.brand.dev/b84b434c-16d8-48de-8c96-eb1bea085bec.svg",
+    "dark": "https://media.brand.dev/ca52e675-30e4-47a2-b056-517c5f0c6d48.svg"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/nathanhoad/godot_dialogue_manager"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/nathanhoad/godot_dialogue_manager"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Writing Dialogue",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "writing/basic-dialogue",
+              "writing/responses-and-branching",
+              "writing/conditions-and-mutations",
+              "writing/labels-and-jumps",
+              "writing/randomization",
+              "writing/variables-and-tags",
+              "writing/concurrent-lines"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Using Dialogue",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "usage/dialogue-balloons",
+              "usage/integrating-dialogue",
+              "usage/dialogue-label",
+              "usage/custom-balloons",
+              "usage/translations"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Advanced",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "advanced/settings",
+              "advanced/custom-processing",
+              "advanced/runtime-generation",
+              "advanced/csharp"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "resources/faq",
+              "resources/examples",
+              "resources/migration-guide"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Core",
             "pages": [
-              "api-reference/introduction"
+              "api/dialogue-manager",
+              "api/dialogue-resource",
+              "api/dialogue-line",
+              "api/dialogue-response"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "UI Components",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/dialogue-label",
+              "api/dialogue-responses-menu"
+            ]
+          },
+          {
+            "group": "C# API",
+            "pages": [
+              "api/csharp-wrapper"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

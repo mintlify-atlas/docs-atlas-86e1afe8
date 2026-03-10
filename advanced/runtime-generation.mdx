@@ -1,0 +1,347 @@
+---
+title: "Runtime Generation"
+description: "Create dialogue resources dynamically at runtime using code"
+---
+
+The Dialogue Manager supports creating dialogue resources at runtime from text strings. This allows you to generate dynamic dialogue based on game state, player actions, procedural content, or external data sources.
+
+## Basic Usage
+
+<Tabs>
+  <Tab title="GDScript">
+    ```gdscript
+    # Create a dialogue resource from a string
+    var resource = DialogueManager.create_resource_from_text("~ label\nCharacter: Hello!")
+    
+    # Use it like any other dialogue resource
+    var line = await resource.get_next_dialogue_line("label")
+    ```
+  </Tab>
+  <Tab title="C#">
+    ```csharp
+    using DialogueManagerRuntime;
+    
+    // Create a dialogue resource from a string
+    var resource = DialogueManager.CreateResourceFromText("~ label\nCharacter: Hello!");
+    
+    // Use it like any other dialogue resource
+    var line = await DialogueManager.GetNextDialogueLine(resource, "label");
+    ```
+  </Tab>
+</Tabs>
+
+## How It Works
+
+The `create_resource_from_text()` method runs the dialogue text through the full dialogue compiler:
+
+1. **Parsing**: The text is parsed into tokens
+2. **Compilation**: Tokens are compiled into executable dialogue
+3. **Validation**: Syntax errors are checked
+4. **Resource Creation**: An ephemeral dialogue resource is created
+
+<Warning>
+If there are syntax errors in the text, the method will fail and return null. Always validate your dynamically generated dialogue syntax.
+</Warning>
+
+## Simple Examples
+
+### Static Generated Dialogue
+
+```gdscript
+func create_greeting_dialogue(character_name: String, greeting: String) -> Resource:
+	var dialogue_text = """
+~ start
+%s: %s
+%s: How are you today?
+- I'm doing great!
+	%s: That's wonderful to hear!
+- Not so good...
+	%s: I'm sorry to hear that.
+	""" % [character_name, greeting, character_name, character_name, character_name]
+	
+	return DialogueManager.create_resource_from_text(dialogue_text)
+
+# Usage
+var dialogue = create_greeting_dialogue("Nathan", "Hello there!")
+DialogueManager.show_dialogue_balloon(dialogue, "start")
+```
+
+### Dynamic Quest Dialogue
+
+```gdscript
+func create_quest_dialogue(quest_name: String, reward: int, difficulty: String) -> Resource:
+	var dialogue_text = "~ quest_offer\n"
+	dialogue_text += "QuestGiver: I have a %s quest for you.\n" % difficulty
+	dialogue_text += "QuestGiver: Complete '%s' and I'll reward you with %d gold.\n" % [quest_name, reward]
+	dialogue_text += "- Accept the quest\n"
+	dialogue_text += "\tdo accept_quest('%s')\n" % quest_name
+	dialogue_text += "\tQuestGiver: Good luck, adventurer!\n"
+	dialogue_text += "- Decline\n"
+	dialogue_text += "\tQuestGiver: Perhaps another time.\n"
+	
+	return DialogueManager.create_resource_from_text(dialogue_text)
+```
+
+## Advanced Examples
+
+### Procedurally Generated NPCs
+
+```gdscript
+class_name ProceduralNPC
+
+var npc_name: String
+var personality: String  # "friendly", "grumpy", "mysterious"
+var topics: Array[String]
+
+func generate_dialogue() -> Resource:
+	var dialogue_text = "~ start\n"
+	
+	# Generate greeting based on personality
+	match personality:
+		"friendly":
+			dialogue_text += "%s: Hi there! Nice to meet you!\n" % npc_name
+		"grumpy":
+			dialogue_text += "%s: What do you want?\n" % npc_name
+		"mysterious":
+			dialogue_text += "%s: Ah... I've been expecting you...\n" % npc_name
+	
+	# Add dialogue options for each topic
+	for topic in topics:
+		dialogue_text += "- Ask about %s\n" % topic
+		dialogue_text += "\tset just_asked_%s = true\n" % topic.to_lower().replace(" ", "_")
+		dialogue_text += "\t=> %s\n" % topic.to_lower().replace(" ", "_")
+	
+	dialogue_text += "- Goodbye\n"
+	dialogue_text += "\t%s: Farewell.\n" % npc_name
+	
+	# Add topic-specific dialogue
+	for topic in topics:
+		var label = topic.to_lower().replace(" ", "_")
+		dialogue_text += "\n~ %s\n" % label
+		dialogue_text += "%s: %s is quite interesting...\n" % [npc_name, topic]
+		dialogue_text += "=> start\n"
+	
+	return DialogueManager.create_resource_from_text(dialogue_text)
+
+# Usage
+func _ready():
+	var npc = ProceduralNPC.new()
+	npc.npc_name = "Mysterious Stranger"
+	npc.personality = "mysterious"
+	npc.topics = ["The Ancient Ruins", "The Prophecy", "Your Destiny"]
+	
+	var dialogue = npc.generate_dialogue()
+	DialogueManager.show_dialogue_balloon(dialogue, "start")
+```
+
+### Loading Dialogue from JSON
+
+```gdscript
+func load_dialogue_from_json(json_path: String) -> Resource:
+	var file = FileAccess.open(json_path, FileAccess.READ)
+	var json = JSON.parse_string(file.get_as_text())
+	file.close()
+	
+	var dialogue_text = ""
+	
+	# Convert JSON structure to dialogue syntax
+	for label in json.keys():
+		dialogue_text += "~ %s\n" % label
+		
+		for line in json[label]:
+			match line.type:
+				"dialogue":
+					dialogue_text += "%s: %s\n" % [line.character, line.text]
+				"choice":
+					dialogue_text += "- %s\n" % line.text
+					dialogue_text += "\t=> %s\n" % line.next
+				"condition":
+					dialogue_text += "if %s:\n" % line.condition
+					dialogue_text += "\t%s: %s\n" % [line.character, line.text]
+		
+		dialogue_text += "\n"
+	
+	return DialogueManager.create_resource_from_text(dialogue_text)
+```
+
+Example JSON structure:
+
+```json
+{
+	"start": [
+		{
+			"type": "dialogue",
+			"character": "Nathan",
+			"text": "Welcome to the game!"
+		},
+		{
+			"type": "choice",
+			"text": "Tell me more",
+			"next": "more_info"
+		}
+	],
+	"more_info": [
+		{
+			"type": "dialogue",
+			"character": "Nathan",
+			"text": "This game is amazing!"
+		}
+	]
+}
+```
+
+### Dynamic Dialogue from External Sources
+
+```gdscript
+func create_dialogue_from_api_response(api_data: Dictionary) -> Resource:
+	var dialogue_text = "~ start\n"
+	
+	# Parse API response
+	var character = api_data.get("character", "NPC")
+	var messages = api_data.get("messages", [])
+	
+	for message in messages:
+		if message.has("condition"):
+			dialogue_text += "if %s:\n" % message.condition
+			dialogue_text += "\t%s: %s\n" % [character, message.text]
+		else:
+			dialogue_text += "%s: %s\n" % [character, message.text]
+		
+		# Handle mutations
+		if message.has("mutations"):
+			for mutation in message.mutations:
+				dialogue_text += "do %s\n" % mutation
+	
+	return DialogueManager.create_resource_from_text(dialogue_text)
+```
+
+### AI-Generated Dialogue Integration
+
+```gdscript
+# Example with a hypothetical AI dialogue generator
+func generate_ai_dialogue(context: String, character: String) -> Resource:
+	# This would call your AI service
+	var ai_response = await AIService.generate_dialogue(context, character)
+	
+	# Convert AI response to dialogue format
+	var dialogue_text = "~ start\n"
+	dialogue_text += "%s: %s\n" % [character, ai_response.text]
+	
+	# Add follow-up options
+	for option in ai_response.followups:
+		dialogue_text += "- %s\n" % option.text
+		dialogue_text += "\t=> %s\n" % option.label
+	
+	return DialogueManager.create_resource_from_text(dialogue_text)
+```
+
+## Validation and Error Handling
+
+Always validate your dynamically generated dialogue:
+
+```gdscript
+func safe_create_dialogue(dialogue_text: String) -> Resource:
+	var resource = DialogueManager.create_resource_from_text(dialogue_text)
+	
+	if resource == null:
+		push_error("Failed to compile dialogue: syntax error in generated text")
+		print("Generated dialogue was:")
+		print(dialogue_text)
+		
+		# Return a fallback dialogue
+		return DialogueManager.create_resource_from_text(
+			"~ start\nNPC: [Error: Dialogue failed to compile]"
+		)
+	
+	return resource
+```
+
+## Using Generated Dialogue
+
+Once created, you can use the generated dialogue resource like any other:
+
+<Tabs>
+  <Tab title="With Balloon">
+    ```gdscript
+    var resource = DialogueManager.create_resource_from_text(dialogue_text)
+    DialogueManager.show_dialogue_balloon(resource, "start")
+    ```
+  </Tab>
+  <Tab title="Manual Traversal">
+    ```gdscript
+    var resource = DialogueManager.create_resource_from_text(dialogue_text)
+    var line = await resource.get_next_dialogue_line("start")
+    
+    while line:
+    	print("%s: %s" % [line.character, line.text])
+    	line = await resource.get_next_dialogue_line(line.next_id)
+    ```
+  </Tab>
+  <Tab title="With Extra Game States">
+    ```gdscript
+    var resource = DialogueManager.create_resource_from_text(dialogue_text)
+    var extra_states = [player_data, quest_manager]
+    var line = await resource.get_next_dialogue_line("start", extra_states)
+    ```
+  </Tab>
+</Tabs>
+
+## Performance Considerations
+
+<Warning>
+Creating dialogue resources at runtime has a performance cost due to compilation. Cache resources when possible.
+</Warning>
+
+### Caching Strategy
+
+```gdscript
+var dialogue_cache := {}
+
+func get_or_create_dialogue(key: String, generator: Callable) -> Resource:
+	if not dialogue_cache.has(key):
+		var dialogue_text = generator.call()
+		dialogue_cache[key] = DialogueManager.create_resource_from_text(dialogue_text)
+	
+	return dialogue_cache[key]
+
+# Usage
+var dialogue = get_or_create_dialogue("quest_001", func():
+	return create_quest_dialogue_text("Find the Sword", 100, "easy")
+)
+```
+
+## Limitations
+
+<Note>
+- Generated dialogue is **ephemeral** - it's not saved to disk
+- It runs through the **same compiler** as .dialogue files, so all syntax rules apply
+- **Processor hooks** (if configured) will run on generated dialogue
+- Generated resources are **not editable** in the Dialogue Manager editor
+</Note>
+
+## Use Cases
+
+Runtime dialogue generation is perfect for:
+
+- **Procedural content** - NPCs, quests, or stories
+- **Player-created content** - Custom dialogue from player input
+- **External data** - Loading dialogue from databases or APIs
+- **Localization** - Generating dialogue in different languages dynamically
+- **AI integration** - Combining with AI services for dynamic conversations
+- **Modding support** - Loading user-created dialogue from mod files
+- **A/B testing** - Testing different dialogue variants
+
+## Best Practices
+
+1. **Validate early**: Check for syntax errors immediately after generation
+2. **Use templates**: Create reusable template functions for common patterns
+3. **Cache when possible**: Don't regenerate the same dialogue repeatedly
+4. **Test thoroughly**: Generated dialogue can have edge cases you didn't anticipate
+5. **Provide fallbacks**: Always have a fallback dialogue in case generation fails
+6. **Escape user input**: If using player input, sanitize it to avoid syntax errors
+
+## See Also
+
+- [Using Dialogue](/usage/integrating-dialogue) - How to use dialogue resources in your game
+- [Writing Dialogue](/writing/basic-dialogue) - Dialogue syntax reference
+- [C# Support](/advanced/csharp) - Using runtime generation in C#

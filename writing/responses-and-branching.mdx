@@ -1,0 +1,190 @@
+---
+title: Responses and Branching
+description: Create interactive dialogue with player responses and branching conversation paths
+---
+
+## Basic Responses
+
+To add interactivity to your dialogue, you can specify responses. Responses are lines that begin with `- `:
+
+```
+Nathan: What would you like to know?
+- Tell me about yourself
+- What's your favorite color?
+- That's all for now
+```
+
+This creates a choice menu for the player with three options.
+
+## Nested Dialogue
+
+One way of branching the dialogue after a response is to nest some dialogue below each response using indentation:
+
+```
+Nathan: How many projects have you started and not finished?
+- Just a couple
+	Nathan: That's not so bad.
+- A lot
+	Nathan: Maybe you should finish one before starting another one.
+- I always finish my projects
+	Nathan: That's great!
+```
+
+<Note>
+Use tabs or consistent spaces for indentation. Nested content must be indented from its parent response.
+</Note>
+
+## Multi-Level Branching
+
+Nested responses can branch indefinitely as more choices are added:
+
+```
+Nathan: How many projects have you started and not finished?
+- Just a couple
+	Nathan: That's not so bad.
+- A lot
+	Nathan: Maybe you should finish one before starting another one.
+- I always finish my projects
+	Nathan: That's great!
+	Nathan: ...but how many is that?
+	- A few
+		Nathan: That's great!
+	- I haven't actually started any
+		Nathan: That's what I thought.
+```
+
+Each level of indentation creates a deeper branch in the conversation tree.
+
+## Inline Jumps
+
+Responses can use inline jumps to redirect dialogue flow:
+
+```
+~ start
+Nathan: Well?
+- First one
+	Nathan: You picked the first.
+- Another one => another_label
+- Start again => start
+=> END
+
+~ another_label
+Nathan: Another one?
+=> END
+```
+
+When the player selects a response with `=> label`, the dialogue immediately jumps to that label instead of continuing with nested content.
+
+<Steps>
+
+<Step title="Response text">
+The text between `-` and any conditions/jumps is displayed to the player.
+</Step>
+
+<Step title="Optional conditions">
+Add conditions in square brackets to control when responses appear (see below).
+</Step>
+
+<Step title="Optional jump">
+Add `=> label` at the end to jump to a specific label when selected.
+</Step>
+
+</Steps>
+
+## Conditional Responses
+
+Responses can include conditions that determine if they are selectable. Add conditions in square brackets:
+
+```
+Nathan: What would you like?
+- This one [if SomeGlobal.some_property == 0]
+	Nathan: Ah, so you want this one?
+- Another one [if SomeGlobal.has_unlocked_option]
+	Nathan: Good choice!
+- Nothing
+	Nathan: Okay then.
+```
+
+Only responses where the condition evaluates to `true` will be shown to the player.
+
+### Complex Conditions
+
+Conditions can use logical operators:
+
+```
+Nathan: What would you like?
+- This one [if SomeGlobal.some_property == 0 or SomeGlobal.some_other_property == false]
+	Nathan: Ah, so you want this one?
+- Another one [if SomeGlobal.level > 5 and SomeGlobal.has_key]
+	Nathan: You're qualified for this one.
+- Call a method [if SomeGlobal.some_method()]
+	Nathan: The method returned true!
+```
+
+### Self-Closing Condition Syntax
+
+When using conditions without nested content (particularly with inline jumps), use the self-closing syntax `[if condition /]`:
+
+```
+Nathan: What would you like?
+- This one [if SomeGlobal.some_property == 0 or SomeGlobal.some_other_property == false /]
+	Nathan: Ah, so you want this one?
+- Another one [if SomeGlobal.some_method() /] => another_label
+- Nothing => END
+```
+
+<Warning>
+If using both a condition and a goto on a response line, make sure the goto is provided **last**:
+
+```
+- My response [if some_condition /] => some_label
+```
+</Warning>
+
+## Complete Example
+
+Here's a complete example showing multiple branching levels and conditions:
+
+```
+~ start
+Nathan: What would you like to know?
+
+- Tell me about yourself [if not locals.asked_about_nathan]
+	set locals.asked_about_nathan = true
+	Nathan: Well, I'm a game developer who loves making dialogue systems.
+	Nathan: Anything else?
+	- What games have you made?
+		Nathan: Mostly small indie projects.
+		=> start
+	- That's all => END
+	=> start
+
+- What's your favorite color? [if not locals.asked_favorite_color]
+	set locals.asked_favorite_color = true
+	Nathan: I'd say blue. It's calming.
+	=> start
+
+- I'm done talking [if locals.asked_about_nathan or locals.asked_favorite_color]
+	Nathan: Alright, see you around!
+	=> END
+
+- That's all for now
+	Nathan: Come back anytime!
+	=> END
+```
+
+This example demonstrates:
+- Conditional responses based on local variables
+- Multi-level branching
+- Jumping back to the start to create a looping menu
+- Different exit paths
+
+<Note>
+`locals` is a feature provided by the example balloon for temporary conversation state. Variables set with `set locals.variable_name = value` only exist during the current conversation.
+</Note>
+
+## Next Steps
+
+- Learn about [conditions and mutations](/writing/conditions-and-mutations) for more control
+- Explore [labels and jumps](/writing/labels-and-jumps) to master dialogue flow
+- Add [randomization](/writing/randomization) to make conversations more dynamic

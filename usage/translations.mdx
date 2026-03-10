@@ -1,0 +1,478 @@
+---
+title: Translations
+description: Add multi-language support to your dialogue with CSV or PO files
+---
+
+## Overview
+
+Dialogue Manager automatically runs all dialogue and response text through Godot's `tr()` function, enabling seamless integration with Godot's localization system. You can use either CSV files or PO (gettext) files for translations.
+
+## Translation Methods
+
+### Automatic Translation Source Detection
+
+By default, Dialogue Manager automatically detects which translation system you're using:
+
+- If a **PO file** is found in your locale settings → uses PO files
+- Otherwise → uses CSV files
+
+### Manual Configuration
+
+Override the automatic detection:
+
+```gdscript
+# In your autoload or _ready() function
+DialogueManager.translation_source = DialogueManager.TranslationSource.CSV   # Force CSV
+DialogueManager.translation_source = DialogueManager.TranslationSource.PO    # Force PO
+DialogueManager.translation_source = DialogueManager.TranslationSource.Guess # Auto-detect
+DialogueManager.translation_source = DialogueManager.TranslationSource.None  # Disable
+```
+
+<Note>
+Setting translation source to `None` disables automatic translations, allowing you to handle translations manually.
+</Note>
+
+## Static Translation Keys
+
+### Using ID Tags
+
+Specify unique translation keys for dialogue lines using `[ID:KEY]` syntax:
+
+```
+Nathan: Hi! I'm Nathan. [ID:NATHAN_GREETING]
+Coco: Meow. [ID:COCO_MEOW]
+```
+
+**Benefits of static keys:**
+- Match dialogue with voice acting files
+- Maintain consistent translations across updates
+- Easier for translators to understand context
+
+<Note>
+If no ID is specified, the dialogue text itself becomes the translation key.
+</Note>
+
+### Including Runtime Tags
+
+Runtime tags and BBCode are part of the dialogue line and should be included in translations:
+
+```
+Nathan: [wave]Hello![/wave] [ID:WAVE_HELLO] [next=auto]
+```
+
+Translators should preserve tags like `[wave]`, `[next=auto]`, etc., in their translations.
+
+## Working with PO Files
+
+### POT Generation
+
+Dialogue Manager automatically adds `.dialogue` files to the POT generation list.
+
+<Steps>
+
+<Step title="Open Project Settings">
+Navigate to **Project > Project Settings > Localization > POT Generation**
+</Step>
+
+<Step title="Verify dialogue files are listed">
+All `.dialogue` files should appear automatically. If not, add them manually.
+</Step>
+
+<Step title="Generate POT template">
+Use Godot's localization tools to generate the POT template file.
+</Step>
+
+</Steps>
+
+![POT Generation Settings](/images/pot-generation.jpg)
+
+### Translation Keys in PO Files
+
+When static IDs are present:
+- The **ID** becomes the POT context (`msgctxt`)
+- The **dialogue text** becomes the POT key (`msgid`)
+
+Example PO file output:
+
+```po
+#: res://dialogue/intro.dialogue
+msgctxt "NATHAN_GREETING"
+msgid "Hi! I'm Nathan."
+msgstr ""
+```
+
+### Adding Translator Notes
+
+Provide context for translators using `##` comments:
+
+```
+## This is the first time that Nathan meets Coco
+Nathan: Hi! I'm Nathan. [ID:HI_IM_NATHAN]
+Coco: Meow. [ID:MEOW]
+```
+
+This generates translator notes in the PO file:
+
+```po
+#. TRANSLATORS: This is the first time that Nathan meets Coco
+#: res://dialogue/intro.dialogue
+msgctxt "HI_IM_NATHAN"
+msgid "Hi! I'm Nathan."
+msgstr ""
+```
+
+<Note>
+This feature is implemented by Godot itself and follows gettext conventions.
+</Note>
+
+## Working with CSV Files
+
+### Exporting Dialogue to CSV
+
+<Steps>
+
+<Step title="Open the dialogue editor">
+Open any `.dialogue` file in the Dialogue Manager editor.
+</Step>
+
+<Step title="Access the Translations menu">
+Click **Translations** in the toolbar.
+</Step>
+
+<Step title="Export to CSV">
+Select **Export translations** and choose a location to save the CSV file.
+</Step>
+
+</Steps>
+
+### CSV Format
+
+The exported CSV contains:
+
+- **Translation keys** - Either the `[ID:KEY]` value or the dialogue text itself
+- **Original text** - The dialogue line in the default language
+- **Translation columns** - One column per language
+
+Example CSV:
+
+```csv
+keys,en,es,fr
+NATHAN_GREETING,"Hi! I'm Nathan.","¡Hola! Soy Nathan.","Salut ! Je m'appelle Nathan."
+COCO_MEOW,"Meow.","Miau.","Miaou."
+"What do you need?","What do you need?","¿Qué necesitas?","De quoi avez-vous besoin ?"
+```
+
+### Merging Translations
+
+If the target CSV file already exists, Dialogue Manager merges with it:
+- New lines are added
+- Existing translations are preserved
+- Duplicate keys are handled gracefully
+
+### Importing CSV Changes
+
+After updating translations in the CSV:
+
+<Steps>
+
+<Step title="Open the Translations menu">
+In the dialogue editor, click **Translations**
+</Step>
+
+<Step title="Import from CSV">
+Select **Import translations** and choose your CSV file
+</Step>
+
+<Step title="Update dialogue files">
+Lines are matched using static keys, and dialogue content is updated with CSV values
+</Step>
+
+</Steps>
+
+<Note>
+Importing only updates lines that have matching translation keys (IDs).
+</Note>
+
+## Translating Character Names
+
+### Character Name Translation
+
+Character names typically appear throughout your game (in UI, menus, etc.), so they should be translated by your game code.
+
+### Exporting Character Names
+
+Export all character names to CSV:
+
+<Steps>
+
+<Step title="Open the Translations menu">
+In the dialogue editor
+</Step>
+
+<Step title="Export character names">
+Select **Export character names**
+</Step>
+
+<Step title="Translate in your localization files">
+Add translations to your main translation CSV or PO files
+</Step>
+
+</Steps>
+
+### Using Translated Names
+
+Character names are added to POT generation with a context of `"dialogue"`:
+
+```gdscript
+character_label.text = tr(dialogue_line.character, "dialogue")
+```
+
+In your translation files:
+
+```csv
+keys,en,es,fr
+Nathan,"Nathan","Natán","Nathan"
+Coco,"Coco","Coco","Coco"
+```
+
+Or in PO files:
+
+```po
+msgctxt "dialogue"
+msgid "Nathan"
+msgstr "Natán"
+```
+
+## Setting Up Locales in Godot
+
+### Configure Project Locales
+
+<Steps>
+
+<Step title="Open Project Settings">
+Navigate to **Project > Project Settings > Localization > Translations**
+</Step>
+
+<Step title="Add translation files">
+Add your CSV or PO files to the translations list
+</Step>
+
+<Step title="Set supported locales">
+In the **Locales** tab, enable the languages you support
+</Step>
+
+<Step title="Test locale switching">
+```gdscript
+TranslationServer.set_locale("es")  # Switch to Spanish
+TranslationServer.set_locale("fr")  # Switch to French
+```
+</Step>
+
+</Steps>
+
+## Dynamic Language Switching
+
+### Runtime Locale Changes
+
+Dialogue Manager automatically detects locale changes and updates the current line:
+
+```gdscript
+func change_language(locale: String) -> void:
+	TranslationServer.set_locale(locale)
+	# Current dialogue automatically updates
+```
+
+The example balloon includes this logic:
+
+```gdscript
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED:
+		# Update current dialogue line with new language
+		if is_instance_valid(dialogue_label):
+			var visible_ratio = dialogue_label.visible_ratio
+			dialogue_line = await dialogue_resource.get_next_dialogue_line(dialogue_line.id)
+			if visible_ratio < 1:
+				dialogue_label.skip_typing()
+```
+
+### Language Selection Menu
+
+Example implementation:
+
+```gdscript
+extends Control
+
+@onready var language_menu: OptionButton = %LanguageMenu
+
+func _ready():
+	language_menu.add_item("English", 0)
+	language_menu.add_item("Español", 1)
+	language_menu.add_item("Français", 2)
+	language_menu.item_selected.connect(_on_language_selected)
+
+func _on_language_selected(index: int):
+	match index:
+		0: TranslationServer.set_locale("en")
+		1: TranslationServer.set_locale("es")
+		2: TranslationServer.set_locale("fr")
+```
+
+## Translation Workflow
+
+### Recommended Workflow
+
+<Steps>
+
+<Step title="Write dialogue in default language">
+Create all dialogue content in your primary language with ID tags:
+```
+Nathan: Welcome to my shop! [ID:SHOP_WELCOME]
+- What are you selling? [ID:SHOP_WHAT_SELLING]
+- Goodbye [ID:SHOP_GOODBYE]
+```
+</Step>
+
+<Step title="Export translations">
+Use the Translations menu to export to CSV or generate POT files
+</Step>
+
+<Step title="Send to translators">
+Provide the CSV or PO files to your translation team with context notes
+</Step>
+
+<Step title="Import completed translations">
+Import updated CSV files or add translated PO files to your project
+</Step>
+
+<Step title="Test each language">
+Switch locales and verify all dialogue displays correctly
+</Step>
+
+</Steps>
+
+## Best Practices
+
+### Use Consistent ID Naming
+
+```
+# Good - descriptive and unique
+Nathan: Hello! [ID:NATHAN_INTRO_HELLO]
+Nathan: Goodbye! [ID:NATHAN_INTRO_GOODBYE]
+
+# Avoid - too generic
+Nathan: Hello! [ID:HELLO]
+Nathan: Goodbye! [ID:BYE]
+```
+
+### Add Context for Translators
+
+```
+## Nathan greets the player for the first time
+Nathan: Welcome, traveler! [ID:NATHAN_FIRST_GREETING]
+
+## Nathan is angry in this scene
+Nathan: Get out of here! [ID:NATHAN_ANGRY_DISMISS]
+```
+
+### Preserve BBCode Tags
+
+Ensure translators maintain formatting tags:
+
+```
+# English
+Nathan: [wave]Hello![/wave] Nice to meet you. [ID:WAVE_GREETING]
+
+# Spanish (preserving tags)
+Nathan: [wave]¡Hola![/wave] Encantado de conocerte.
+
+# French (preserving tags)
+Nathan: [wave]Bonjour ![/wave] Ravi de vous rencontrer.
+```
+
+### Test with Pseudo-localization
+
+Create a test locale to verify your UI handles different text lengths:
+
+```gdscript
+# Create a pseudo-locale for testing
+func _ready():
+	if OS.is_debug_build():
+		var pseudo = Translation.new()
+		pseudo.locale = "pseudo"
+		TranslationServer.add_translation(pseudo)
+```
+
+## Handling Variables in Translations
+
+### Variables in Dialogue
+
+When using variables in dialogue:
+
+```
+Nathan: You have {{player.gold}} gold coins. [ID:SHOW_GOLD]
+```
+
+Translators can adjust word order:
+
+```
+# English
+You have {{player.gold}} gold coins.
+
+# Spanish
+Tienes {{player.gold}} monedas de oro.
+
+# French (different word order)
+Vous avez {{player.gold}} pièces d'or.
+```
+
+The `{{player.gold}}` variable is evaluated at runtime and works in all languages.
+
+## Troubleshooting
+
+### Translations Not Appearing
+
+<Steps>
+
+<Step title="Check locale settings">
+Verify the current locale:
+```gdscript
+print(TranslationServer.get_locale())
+```
+</Step>
+
+<Step title="Verify translation files are loaded">
+Check **Project Settings > Localization > Translations**
+</Step>
+
+<Step title="Check translation source setting">
+```gdscript
+print(DialogueManager.translation_source)
+```
+</Step>
+
+<Step title="Test with tr() directly">
+```gdscript
+print(tr("NATHAN_GREETING"))  # Should print translated text
+```
+</Step>
+
+</Steps>
+
+### Missing Translations
+
+If some lines aren't translated:
+- Verify the translation key exists in your CSV/PO file
+- Check for typos in the ID tags
+- Ensure the CSV file is properly formatted
+- Reimport translation files in Godot
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Dialogue Balloons" icon="message" href="/usage/dialogue-balloons">
+    Learn about displaying dialogue with balloons
+  </Card>
+  <Card title="Integrating Dialogue" icon="code" href="/usage/integrating-dialogue">
+    Integrate dialogue into your game code
+  </Card>
+</CardGroup>
