@@ -289,6 +289,39 @@ Get a specific line by its ID. This is used internally by `get_next_dialogue_lin
   The requested dialogue line, or `null` if not found
 </ResponseField>
 
+### create_resource_from_text
+
+```gdscript
+func create_resource_from_text(text: String) -> Resource
+```
+
+Create a DialogueResource at runtime from dialogue text. Useful for dynamically generated or procedural dialogue.
+
+<ParamField name="text" type="String" required>
+  The dialogue text to compile into a resource
+</ParamField>
+
+<ResponseField name="returns" type="DialogueResource">
+  A compiled DialogueResource, or asserts if there are syntax errors
+</ResponseField>
+
+<Warning>
+This method will assert and fail if the dialogue text contains syntax errors. Make sure to validate your dialogue text before calling this method.
+</Warning>
+
+**Example:**
+```gdscript
+var dialogue_text = """
+~ start
+Nathan: Hello from runtime!
+=> END
+"""
+var resource = DialogueManager.create_resource_from_text(dialogue_text)
+var line = await resource.get_next_dialogue_line("start")
+```
+
+See the [Runtime Generation](/advanced/runtime-generation) guide for more details and use cases.
+
 ## Enums
 
 ### MutationBehaviour
