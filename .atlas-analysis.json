@@ -1,0 +1,127 @@
+{
+  "projectType": "framework",
+  "projectName": "Dialogue Manager",
+  "projectDescription": "A powerful nonlinear dialogue system for Godot that provides a stateless branching dialogue editor and runtime.",
+  "theme": "aspen",
+  "primaryColor": "#2c1946",
+  "lightColor": "#bc95fa",
+  "darkColor": "#644c8c",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Writing Dialogue",
+            "pages": [
+              "writing/basic-dialogue",
+              "writing/responses-and-branching",
+              "writing/conditions-and-mutations",
+              "writing/labels-and-jumps",
+              "writing/randomization",
+              "writing/variables-and-tags",
+              "writing/concurrent-lines"
+            ]
+          },
+          {
+            "group": "Using Dialogue",
+            "pages": [
+              "usage/dialogue-balloons",
+              "usage/integrating-dialogue",
+              "usage/dialogue-label",
+              "usage/custom-balloons",
+              "usage/translations"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/settings",
+              "advanced/custom-processing",
+              "advanced/runtime-generation",
+              "advanced/csharp"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "resources/faq",
+              "resources/examples",
+              "resources/migration-guide"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core",
+            "pages": [
+              "api/dialogue-manager",
+              "api/dialogue-resource",
+              "api/dialogue-line",
+              "api/dialogue-response"
+            ]
+          },
+          {
+            "group": "UI Components",
+            "pages": [
+              "api/dialogue-label",
+              "api/dialogue-responses-menu"
+            ]
+          },
+          {
+            "group": "C# API",
+            "pages": [
+              "api/csharp-wrapper"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Nonlinear branching dialogue with conditions and mutations",
+    "Integrated dialogue editor with syntax highlighting",
+    "Stateless runtime for easy state management",
+    "Custom DialogueLabel node with BBCode support",
+    "Full C# support via wrapper classes",
+    "Built-in translation support",
+    "Customizable dialogue balloons",
+    "Random line selection and weighting",
+    "Label/jump system for dialogue flow control",
+    "Concurrent/simultaneous dialogue lines"
+  ],
+  "publicApiSurface": [
+    "DialogueManager.show_dialogue_balloon()",
+    "DialogueManager.get_next_dialogue_line()",
+    "DialogueManager.show_example_dialogue_balloon()",
+    "DialogueManager.create_resource_from_text()",
+    "DialogueManager.dialogue_started",
+    "DialogueManager.dialogue_ended",
+    "DialogueManager.got_dialogue",
+    "DialogueManager.mutated",
+    "DialogueManager.passed_label",
+    "DialogueResource.get_next_dialogue_line()",
+    "DialogueLine.character",
+    "DialogueLine.text",
+    "DialogueLine.responses",
+    "DialogueLine.tags",
+    "DialogueLine.get_tag_value()",
+    "DialogueResponse.text",
+    "DialogueResponse.is_allowed",
+    "DialogueLabel.type_out()",
+    "DialogueLabel.skip_typing()",
+    "DialogueLabel.spoke",
+    "DialogueLabel.finished_typing"
+  ]
+}
